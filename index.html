@@ -556,7 +556,7 @@
     healthDate: fmtDate(new Date()),
     banner: { src: null },
     bannerEditing: false,
-    youtube: { videoId: null },
+    youtube: { type: null, id: null },
     youtubeEditing: false,
   };
 
@@ -580,19 +580,24 @@
   }
   function todayStr(){ return fmtDate(new Date()); }
   function uid(){ return Math.random().toString(36).slice(2,9); }
-  function extractYouTubeId(input){
+  function extractYouTubeSource(input){
     input = (input||'').trim();
-    if(/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+    if(/^[a-zA-Z0-9_-]{11}$/.test(input)) return { type: 'video', id: input };
     try{
       const url = new URL(input);
+      const list = url.searchParams.get('list');
       if(url.hostname.includes('youtu.be')){
-        return url.pathname.slice(1).split('?')[0] || null;
+        const id = url.pathname.slice(1).split('?')[0];
+        if(list) return { type: 'playlist', id: list };
+        if(id) return { type: 'video', id };
       }
       if(url.hostname.includes('youtube.com')){
-        if(url.pathname.startsWith('/embed/')) return url.pathname.split('/embed/')[1];
-        if(url.pathname.startsWith('/shorts/')) return url.pathname.split('/shorts/')[1];
+        if(url.pathname === '/playlist' && list) return { type: 'playlist', id: list };
+        if(url.pathname.startsWith('/embed/')) return { type: 'video', id: url.pathname.split('/embed/')[1] };
+        if(url.pathname.startsWith('/shorts/')) return { type: 'video', id: url.pathname.split('/shorts/')[1] };
         const v = url.searchParams.get('v');
-        if(v) return v;
+        if(v) return { type: 'video', id: v };
+        if(list) return { type: 'playlist', id: list };
       }
     }catch(e){ /* not a valid URL */ }
     return null;
@@ -646,7 +651,7 @@
     state.finance = await safeGet('finance-data', { transactions: [] });
     state.health = await safeGet('health-data', { entries: {} });
     state.banner = await safeGet('banner-data', { src: null });
-    state.youtube = await safeGet('youtube-data', { videoId: null });
+    state.youtube = await safeGet('youtube-data', { type: null, id: null });
     state.loaded = true;
     render();
   }
@@ -802,15 +807,18 @@
   }
 
   function renderPlayer(){
-    if(state.youtubeEditing || !state.youtube.videoId){
+    if(state.youtubeEditing || !state.youtube.id){
       return `
         <div class="lo-player">
           <div class="lo-player-label">▸ PLAYERIS</div>
-          <input class="lo-input" id="yt-url-input" placeholder="Ielīmē YouTube saiti..." />
+          <input class="lo-input" id="yt-url-input" placeholder="Ielīmē video vai playlist saiti..." />
           <button class="lo-btn" id="yt-save-btn">Iestatīt</button>
         </div>
       `;
     }
+    const embedSrc = state.youtube.type === 'playlist'
+      ? `https://www.youtube.com/embed/videoseries?list=${state.youtube.id}`
+      : `https://www.youtube.com/embed/${state.youtube.id}`;
     return `
       <div class="lo-player">
         <div class="lo-player-header">
@@ -818,7 +826,7 @@
           <button class="lo-player-change" id="yt-change-btn">Mainīt</button>
         </div>
         <div class="lo-player-frame-wrap">
-          <iframe src="https://www.youtube.com/embed/${state.youtube.videoId}" title="YouTube player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          <iframe src="${embedSrc}" title="YouTube player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         </div>
       </div>
     `;
@@ -1482,9 +1490,9 @@
     if(ytSaveBtn){
       ytSaveBtn.addEventListener('click', async ()=>{
         const input = root.querySelector('#yt-url-input');
-        const id = extractYouTubeId(input.value);
-        if(!id){ alert('Nevarēju atpazīt YouTube saiti. Pārbaudi un mēģini vēlreiz.'); return; }
-        state.youtube = { videoId: id };
+        const source = extractYouTubeSource(input.value);
+        if(!source){ alert('Nevarēju atpazīt YouTube saiti. Pārbaudi un mēģini vēlreiz.'); return; }
+        state.youtube = source;
         state.youtubeEditing = false;
         await safeSet('youtube-data', state.youtube);
         render();
