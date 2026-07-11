@@ -1,0 +1,1930 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+.lifeos-root {
+  --bg-void:#0A0D12;
+  --bg-panel:#12161D;
+  --bg-raised:#1A1F28;
+  --accent:#4FD1C5;
+  --accent-dim: rgba(79,209,197,0.14);
+  --warn:#E8A33D;
+  --warn-dim: rgba(232,163,61,0.14);
+  --danger:#E8615C;
+  --text:#E8ECF1;
+  --text-muted:#7B8494;
+  --text-dim:#4B5563;
+  --border:#212733;
+  --radius: 10px;
+
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-void);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.lifeos-root * { box-sizing: border-box; }
+
+.lo-body { display: flex; flex: 1; min-height: 0; }
+
+/* ---- Banner ---- */
+.lo-banner { position: relative; width: 100%; height: 150px; flex-shrink: 0; background: var(--bg-panel); border-bottom: 1px solid var(--border); overflow: hidden; }
+.lo-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lo-banner-empty {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  border: 1px dashed var(--border);
+  box-sizing: border-box;
+  transition: color .15s, border-color .15s;
+}
+.lo-banner-empty:hover { color: var(--accent); border-color: var(--accent); }
+.lo-banner-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+.lo-banner-btn {
+  background: rgba(10,13,18,0.75);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.lo-banner-btn:hover { border-color: var(--accent); color: var(--accent); }
+.lo-banner-editor {
+  position: absolute; inset: 0;
+  background: rgba(10,13,18,0.94);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 14px;
+}
+.lo-banner-editor-label { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--text-muted); letter-spacing: 0.5px; }
+.lo-banner-editor-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.lo-banner-editor-row .lo-input { width: 240px; }
+
+.lifeos-mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ---- Sidebar ---- */
+.lo-sidebar {
+  width: 210px;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 14px;
+}
+.lo-logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  margin-bottom: 2px;
+  padding: 0 6px;
+}
+.lo-logo span { color: var(--accent); }
+.lo-tagline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  padding: 0 6px;
+  margin-bottom: 22px;
+  letter-spacing: 0.5px;
+}
+.lo-nav { display: flex; flex-direction: column; gap: 3px; }
+.lo-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background .15s, color .15s;
+  user-select: none;
+  border: 1px solid transparent;
+}
+.lo-nav-item:hover { background: var(--bg-raised); color: var(--text); }
+.lo-nav-item.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: rgba(79,209,197,0.25);
+}
+.lo-nav-item svg { flex-shrink: 0; opacity: 0.9; }
+.lo-nav-spacer { flex: 1; }
+.lo-status-mini {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  padding: 10px 6px 2px;
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+  line-height: 1.6;
+}
+.lo-status-mini .dot { color: var(--accent); }
+
+/* ---- YouTube Player ---- */
+.lo-player { margin: 14px 0; padding-top: 14px; border-top: 1px solid var(--border); }
+.lo-player-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.lo-player-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 0.5px; }
+.lo-player-change { background: none; border: none; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 10px; cursor: pointer; padding: 0; }
+.lo-player-change:hover { color: var(--accent); }
+.lo-player-frame-wrap { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; background: var(--bg-raised); border: 1px solid var(--border); }
+.lo-player-frame-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+.lo-player input.lo-input { font-size: 11px; padding: 7px 8px; margin-bottom: 6px; }
+.lo-player button.lo-btn { width: 100%; font-size: 11px; padding: 7px; }
+
+/* ---- Auth ---- */
+.lo-auth-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.lo-auth-card { width: 300px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px; text-align: center; }
+.lo-auth-tabs { display: flex; gap: 6px; margin-bottom: 18px; justify-content: center; }
+.lo-auth-error { color: var(--danger); font-size: 11.5px; margin-bottom: 10px; font-family: 'JetBrains Mono', monospace; line-height: 1.5; }
+.lo-logout-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 4px;
+}
+.lo-logout-btn:hover { color: var(--danger); }
+
+/* ---- Main ---- */
+.lo-main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg-void); }
+.lo-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 26px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+}
+.lo-topbar-left { font-size: 12px; color: var(--text-muted); letter-spacing: 0.5px; }
+.lo-topbar-right { display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--text-dim); }
+.lo-uptime-badge {
+  background: var(--accent-dim);
+  color: var(--accent);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.lo-content { flex: 1; overflow-y: auto; padding: 26px 30px 40px; }
+.lo-content::-webkit-scrollbar { width: 8px; }
+.lo-content::-webkit-scrollbar-thumb { background: var(--bg-raised); border-radius: 4px; }
+
+.lo-module-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.lo-module-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+/* ---- Cards / grid ---- */
+.lo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.lo-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+.lo-card-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.lo-card-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 26px;
+  font-weight: 700;
+}
+.lo-card-value.accent { color: var(--accent); }
+.lo-card-value.warn { color: var(--warn); }
+
+.lo-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+.lo-panel-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---- Process list (habits on dashboard) ---- */
+.lo-proc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.lo-proc-row:last-child { border-bottom: none; }
+.lo-proc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+.lo-proc-dot.on { background: var(--accent); box-shadow: 0 0 8px rgba(79,209,197,0.6); }
+.lo-proc-name { flex: 1; color: var(--text); }
+.lo-proc-meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
+
+/* ---- Forms ---- */
+.lo-input, .lo-select, .lo-textarea {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  width: 100%;
+}
+.lo-input:focus, .lo-select:focus, .lo-textarea:focus { border-color: var(--accent); }
+.lo-textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
+.lo-row-form { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.lo-row-form .lo-input { flex: 2; min-width: 140px; }
+.lo-row-form .lo-select { flex: 1; min-width: 110px; }
+
+.lo-btn {
+  background: var(--accent);
+  color: #06231F;
+  border: none;
+  padding: 9px 16px;
+  border-radius: 7px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: opacity .15s;
+  white-space: nowrap;
+}
+.lo-btn:hover { opacity: 0.85; }
+.lo-btn.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.lo-btn.ghost:hover { color: var(--text); border-color: var(--text-dim); }
+.lo-btn.danger-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 6px 10px;
+  font-size: 11px;
+}
+.lo-btn.danger-ghost:hover { color: var(--danger); border-color: var(--danger); }
+
+/* ---- Habits list ---- */
+.lo-habit-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.lo-habit-item:last-child { border-bottom: none; }
+.lo-habit-name { flex: 1; min-width: 0; }
+.lo-habit-title { font-weight: 600; font-size: 13.5px; }
+.lo-habit-area { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.lo-week { display: flex; gap: 5px; }
+.lo-day-box {
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all .1s;
+  flex-shrink: 0;
+}
+.lo-day-box.done { background: var(--accent); color: #06231F; border-color: var(--accent); font-weight: 700; }
+.lo-day-box:hover { border-color: var(--accent); }
+.lo-streak-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--warn);
+  background: var(--warn-dim);
+  padding: 3px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+
+/* ---- Tasks ---- */
+.lo-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+.lo-tab {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+.lo-tab.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(79,209,197,0.3); }
+.lo-task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.lo-task-check {
+  width: 18px; height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--text-dim);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.lo-task-check.done { background: var(--accent); border-color: var(--accent); }
+.lo-task-text { flex: 1; font-size: 13.5px; min-width: 0; word-break: break-word; }
+.lo-task-text.done { color: var(--text-dim); text-decoration: line-through; }
+.lo-task-tags { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.lo-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--bg-raised);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.lo-tag.prio-Augsta { color: var(--danger); }
+.lo-tag.prio-Vidēja { color: var(--warn); }
+.lo-tag.prio-Zema { color: var(--text-dim); }
+
+/* ---- Goals ---- */
+.lo-goal-item { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.lo-goal-item:last-child { border-bottom: none; }
+.lo-goal-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.lo-goal-text { font-size: 13.5px; font-weight: 600; }
+.lo-goal-area-tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); }
+.lo-progress-track { background: var(--bg-raised); height: 7px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+.lo-progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .2s; }
+.lo-goal-controls { display: flex; align-items: center; gap: 8px; }
+.lo-goal-controls input[type=range] { flex: 1; accent-color: var(--accent); }
+.lo-goal-pct { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); width: 32px; text-align: right; }
+
+/* ---- Journal ---- */
+.lo-journal-entry {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.lo-journal-entry:hover .lo-journal-preview { color: var(--text); }
+.lo-journal-date { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); margin-bottom: 4px; }
+.lo-journal-preview { font-size: 12.5px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.lo-empty { color: var(--text-dim); font-size: 13px; padding: 20px 0; text-align: center; }
+
+/* ---- Learning tracks ---- */
+.lo-track-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+.lo-track-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.lo-track-name { font-weight: 700; font-size: 14.5px; flex: 1; }
+.lo-track-pct { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); }
+.lo-topic-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.lo-topic-text { flex: 1; font-size: 13px; }
+.lo-topic-text.done { color: var(--text-dim); text-decoration: line-through; }
+.lo-topic-add-row { display: flex; gap: 8px; margin-top: 8px; }
+.lo-topic-add-row .lo-input { font-size: 12.5px; padding: 7px 10px; }
+.lo-track-notes-toggle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  cursor: pointer;
+  margin-top: 10px;
+  display: inline-block;
+  letter-spacing: 0.5px;
+}
+.lo-track-notes-toggle:hover { color: var(--accent); }
+.lo-track-notes { margin-top: 8px; }
+.lo-track-notes textarea { min-height: 70px; font-size: 12.5px; }
+
+/* ---- Calendar ---- */
+.lo-cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.lo-cal-month-label { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--text); text-transform: capitalize; }
+.lo-cal-nav { display: flex; gap: 6px; align-items: center; }
+.lo-cal-nav-btn {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+.lo-cal-nav-btn:hover { color: var(--accent); border-color: var(--accent); }
+.lo-cal-today-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+.lo-cal-today-btn:hover { color: var(--accent); border-color: var(--accent); }
+.lo-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.lo-cal-daylabel { text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); padding-bottom: 4px; letter-spacing: 0.5px; }
+.lo-cal-cell {
+  min-height: 58px;
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  border-radius: 7px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: border-color .12s;
+}
+.lo-cal-cell:hover { border-color: var(--text-dim); }
+.lo-cal-cell.today { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(79,209,197,0.25); }
+.lo-cal-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+.lo-cal-daynum { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); }
+.lo-cal-cell.today .lo-cal-daynum { color: var(--accent); font-weight: 700; }
+.lo-cal-dots { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+.lo-cal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+.lo-cal-dot.habit-full { background: var(--accent); }
+.lo-cal-dot.habit-partial { background: var(--accent); opacity: 0.4; }
+.lo-cal-dot.task { background: var(--warn); }
+.lo-cal-dot.journal { width: 6px; height: 6px; border-radius: 1px; background: transparent; border: 1.5px solid var(--accent); }
+.lo-cal-legend { display: flex; gap: 16px; margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--text-dim); flex-wrap: wrap; }
+.lo-cal-legend-item { display: flex; align-items: center; gap: 6px; }
+
+/* ---- Finance ---- */
+.lo-fin-tabs { display: flex; gap: 6px; }
+.lo-chart-wrap { position: relative; height: 250px; width: 100%; margin-top: 4px; }
+
+/* ---- Health ---- */
+.lo-health-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.lo-health-field { flex: 1; min-width: 140px; }
+.lo-health-field label { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.lo-history-row { display: flex; align-items: center; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; cursor: pointer; }
+.lo-history-row:hover { color: var(--accent); }
+.lo-history-date { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); flex: 0 0 90px; }
+
+@media (max-width: 640px) {
+  .lo-sidebar { width: 64px; padding: 16px 8px; }
+  .lo-logo, .lo-tagline, .lo-status-mini, .lo-nav-item span.lbl { display: none; }
+  .lo-player { display: none; }
+  .lo-nav-item { justify-content: center; }
+  .lo-content { padding: 18px 14px; }
+  .lo-topbar { padding: 12px 16px; }
+}
+</style>
+
+<div class="lifeos-root" id="lifeos-app"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  const SUPABASE_URL = 'https://wmtnarxrjivmunycffax.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtdG5hcnhyaml2bXVueWNmZmF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MDk3MzYsImV4cCI6MjA5OTE4NTczNn0.dLswf9MZRrdzEs63uxx1h1YgCWjtpii4oe96QMqpPBw';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const AREAS = ['Veselība','Karjera','Finanses','Attiecības','Izaugsme','Radošums'];
+  const root = document.getElementById('lifeos-app');
+
+  const state = {
+    session: null,
+    authMode: 'login',
+    authError: '',
+    authBusy: false,
+    module: 'dashboard',
+    taskFilter: 'all',
+    journalDate: fmtDate(new Date()),
+    loaded: false,
+    meta: { startDate: fmtDate(new Date()) },
+    habits: { habits: [], logs: {} },
+    tasks: { tasks: [] },
+    goals: { goals: [] },
+    journal: { entries: {} },
+    learning: { tracks: [] },
+    openNotes: {},
+    calYear: new Date().getFullYear(),
+    calMonth: new Date().getMonth(),
+    finance: { transactions: [] },
+    financeView: 'summary',
+    finVizYear: new Date().getFullYear(),
+    finVizMonth: new Date().getMonth(),
+    health: { entries: {} },
+    healthDate: fmtDate(new Date()),
+    banner: { src: null },
+    bannerEditing: false,
+    youtube: { videoId: null },
+    youtubeEditing: false,
+  };
+
+  let financeChartInstance = null;
+  function loadChartJs(cb){
+    if(window.Chart){ cb(); return; }
+    const existing = document.getElementById('lifeos-chartjs');
+    if(existing){ existing.addEventListener('load', cb); return; }
+    const script = document.createElement('script');
+    script.id = 'lifeos-chartjs';
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js';
+    script.onload = cb;
+    document.head.appendChild(script);
+  }
+
+  function fmtDate(d){
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function todayStr(){ return fmtDate(new Date()); }
+  function uid(){ return Math.random().toString(36).slice(2,9); }
+  function extractYouTubeId(input){
+    input = (input||'').trim();
+    if(/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+    try{
+      const url = new URL(input);
+      if(url.hostname.includes('youtu.be')){
+        return url.pathname.slice(1).split('?')[0] || null;
+      }
+      if(url.hostname.includes('youtube.com')){
+        if(url.pathname.startsWith('/embed/')) return url.pathname.split('/embed/')[1];
+        if(url.pathname.startsWith('/shorts/')) return url.pathname.split('/shorts/')[1];
+        const v = url.searchParams.get('v');
+        if(v) return v;
+      }
+    }catch(e){ /* not a valid URL */ }
+    return null;
+  }
+  function last7Days(){
+    const arr = [];
+    for(let i=6;i>=0;i--){
+      const d = new Date();
+      d.setDate(d.getDate()-i);
+      arr.push(fmtDate(d));
+    }
+    return arr;
+  }
+  const DAY_LABELS = ['Sv','Pr','Ot','Tr','Ce','Pk','Se'];
+  function dayLabel(dateStr){
+    const d = new Date(dateStr+'T00:00:00');
+    return DAY_LABELS[d.getDay()];
+  }
+
+  async function safeGet(key, fallback){
+    if(!state.session) return fallback;
+    try{
+      const { data, error } = await sb.from('life_os_data').select('value').eq('user_id', state.session.user.id).eq('key', key).maybeSingle();
+      if(error || !data) return fallback;
+      return data.value;
+    }catch(e){ return fallback; }
+  }
+  async function safeSet(key, value){
+    if(!state.session) return;
+    try{
+      const { data: existing } = await sb.from('life_os_data').select('id').eq('user_id', state.session.user.id).eq('key', key).maybeSingle();
+      if(existing){
+        await sb.from('life_os_data').update({ value, updated_at: new Date().toISOString() }).eq('id', existing.id);
+      } else {
+        await sb.from('life_os_data').insert({ user_id: state.session.user.id, key, value });
+      }
+    }catch(e){ console.error('supabase set failed', key, e); }
+  }
+
+  async function loadAll(){
+    state.meta = await safeGet('meta-data', null);
+    if(!state.meta){
+      state.meta = { startDate: todayStr() };
+      await safeSet('meta-data', state.meta);
+    }
+    state.habits = await safeGet('habits-data', { habits: [], logs: {} });
+    state.tasks = await safeGet('tasks-data', { tasks: [] });
+    state.goals = await safeGet('goals-data', { goals: [] });
+    state.journal = await safeGet('journal-data', { entries: {} });
+    state.learning = await safeGet('learning-data', { tracks: [] });
+    state.finance = await safeGet('finance-data', { transactions: [] });
+    state.health = await safeGet('health-data', { entries: {} });
+    state.banner = await safeGet('banner-data', { src: null });
+    state.youtube = await safeGet('youtube-data', { videoId: null });
+    state.loaded = true;
+    render();
+  }
+
+  function icon(name){
+    const icons = {
+      dashboard: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
+      habits: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2l4 4-4 4"/><path d="M3 12v-2a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 12v2a4 4 0 0 1-4 4H3"/></svg>',
+      tasks: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+      goals: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>',
+      journal: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+      learning: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>',
+      finance: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/></svg>',
+      health: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/><path d="M3.5 12H8l2-3 2.5 5 1.5-2H20.5"/></svg>',
+    };
+    return icons[name] || '';
+  }
+
+  function navItem(key, label){
+    return `<div class="lo-nav-item ${state.module===key?'active':''}" data-nav="${key}">${icon(key)}<span class="lbl">${label}</span></div>`;
+  }
+
+  function currentStreak(habitId){
+    let streak = 0;
+    let d = new Date();
+    while(true){
+      const ds = fmtDate(d);
+      if(state.habits.logs[ds] && state.habits.logs[ds][habitId]){
+        streak++;
+        d.setDate(d.getDate()-1);
+      } else break;
+    }
+    return streak;
+  }
+
+  function uptimeDays(){
+    const start = new Date(state.meta.startDate+'T00:00:00');
+    const now = new Date();
+    const diff = Math.floor((now-start)/(1000*60*60*24));
+    return diff+1;
+  }
+
+  const CAL_DAY_LABELS = ['Pr','Ot','Tr','Ce','Pk','Se','Sv'];
+  function buildCalendarCells(year, month){
+    const firstOfMonth = new Date(year, month, 1);
+    const startOffset = (firstOfMonth.getDay()+6)%7; // Monday-first
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const cells = [];
+    for(let i=0;i<startOffset;i++) cells.push(null);
+    for(let d=1; d<=daysInMonth; d++){
+      cells.push(fmtDate(new Date(year, month, d)));
+    }
+    return cells;
+  }
+
+  function renderCalendar(){
+    const cells = buildCalendarCells(state.calYear, state.calMonth);
+    const today = todayStr();
+    const monthLabel = new Date(state.calYear, state.calMonth, 1).toLocaleDateString('lv-LV', { month: 'long', year: 'numeric' });
+    const totalHabits = state.habits.habits.length;
+
+    return `
+      <div class="lo-panel">
+        <div class="lo-cal-header">
+          <div class="lo-cal-month-label">${monthLabel}</div>
+          <div class="lo-cal-nav">
+            <button class="lo-cal-nav-btn" id="cal-prev">‹</button>
+            <button class="lo-cal-today-btn" id="cal-today">Šodien</button>
+            <button class="lo-cal-nav-btn" id="cal-next">›</button>
+          </div>
+        </div>
+        <div class="lo-cal-grid">
+          ${CAL_DAY_LABELS.map(l=>`<div class="lo-cal-daylabel">${l}</div>`).join('')}
+          ${cells.map(dateStr=>{
+            if(!dateStr) return `<div class="lo-cal-cell empty"></div>`;
+            const dayNum = parseInt(dateStr.slice(8,10),10);
+            const doneCount = totalHabits ? state.habits.habits.filter(h => state.habits.logs[dateStr] && state.habits.logs[dateStr][h.id]).length : 0;
+            const habitDotClass = totalHabits===0 ? '' : (doneCount===totalHabits ? 'habit-full' : (doneCount>0 ? 'habit-partial' : ''));
+            const tasksDue = state.tasks.tasks.filter(t=>t.dueDate===dateStr).length;
+            const hasJournal = !!state.journal.entries[dateStr];
+            return `
+              <div class="lo-cal-cell ${dateStr===today?'today':''}" data-cal-day="${dateStr}">
+                <div class="lo-cal-daynum">${dayNum}</div>
+                <div class="lo-cal-dots">
+                  ${habitDotClass ? `<div class="lo-cal-dot ${habitDotClass}"></div>` : ''}
+                  ${tasksDue ? `<div class="lo-cal-dot task"></div>` : ''}
+                  ${hasJournal ? `<div class="lo-cal-dot journal"></div>` : ''}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div class="lo-cal-legend">
+          <div class="lo-cal-legend-item"><div class="lo-cal-dot habit-full"></div> Ieradumi izpildīti</div>
+          <div class="lo-cal-legend-item"><div class="lo-cal-dot task"></div> Uzdevuma termiņš</div>
+          <div class="lo-cal-legend-item"><div class="lo-cal-dot journal"></div> Dienasgrāmatas ieraksts</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function render(){
+    if(!state.loaded){
+      root.innerHTML = `<div style="padding:40px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:13px;">Ielādē sistēmu...</div>`;
+      return;
+    }
+    const sidebar = `
+      <div class="lo-sidebar">
+        <div class="lo-logo">LIFE<span>OS</span></div>
+        <div class="lo-tagline">v1.0 // personīgā sistēma</div>
+        ${renderPlayer()}
+        <div class="lo-nav">
+          ${navItem('dashboard','Pārskats')}
+          ${navItem('habits','Ieradumi')}
+          ${navItem('tasks','Uzdevumi')}
+          ${navItem('goals','Mērķi')}
+          ${navItem('learning','Mācīšanās')}
+          ${navItem('finance','Finanses')}
+          ${navItem('health','Veselība')}
+          ${navItem('journal','Dienasgrāmata')}
+        </div>
+        <div class="lo-nav-spacer"></div>
+        <div class="lo-status-mini">
+          <div><span class="dot">●</span> SISTĒMA AKTĪVA</div>
+          <div>UPTIME: ${uptimeDays()} d.</div>
+          <button class="lo-logout-btn" id="logout-btn">IZRAKSTĪTIES</button>
+        </div>
+      </div>
+    `;
+
+    const topbar = `
+      <div class="lo-topbar">
+        <div class="lo-topbar-left">${moduleTitleLine()}</div>
+        <div class="lo-topbar-right">
+          <span>${new Date().toLocaleDateString('lv-LV', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+          <span class="lo-uptime-badge">UPTIME ${uptimeDays()}D</span>
+        </div>
+      </div>
+    `;
+
+    root.innerHTML = `
+      ${renderBanner()}
+      <div class="lo-body">
+        ${sidebar}
+        <div class="lo-main">
+          ${topbar}
+          <div class="lo-content">${renderModule()}</div>
+        </div>
+      </div>
+    `;
+
+    attachEvents();
+  }
+
+  function renderPlayer(){
+    if(state.youtubeEditing || !state.youtube.videoId){
+      return `
+        <div class="lo-player">
+          <div class="lo-player-label">▸ PLAYERIS</div>
+          <input class="lo-input" id="yt-url-input" placeholder="Ielīmē YouTube saiti..." />
+          <button class="lo-btn" id="yt-save-btn">Iestatīt</button>
+        </div>
+      `;
+    }
+    return `
+      <div class="lo-player">
+        <div class="lo-player-header">
+          <div class="lo-player-label">▸ PLAYERIS</div>
+          <button class="lo-player-change" id="yt-change-btn">Mainīt</button>
+        </div>
+        <div class="lo-player-frame-wrap">
+          <iframe src="https://www.youtube.com/embed/${state.youtube.videoId}" title="YouTube player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderBanner(){
+    if(state.bannerEditing){
+      return `
+        <div class="lo-banner">
+          <div class="lo-banner-editor">
+            <div class="lo-banner-editor-label">PIEVIENOT ATTĒLU VAI GIF</div>
+            <div class="lo-banner-editor-row">
+              <input type="file" accept="image/*" id="banner-file-input" style="display:none;" />
+              <button class="lo-btn ghost" id="banner-upload-btn">Augšupielādēt failu</button>
+              <span style="color:var(--text-dim);font-size:11px;">vai</span>
+              <input type="text" class="lo-input" id="banner-url-input" placeholder="Ielīmē attēla/GIF saiti (https://...)" />
+              <button class="lo-btn" id="banner-save-url-btn">Saglabāt</button>
+            </div>
+            <button class="lo-btn danger-ghost" id="banner-cancel-btn">Atcelt</button>
+          </div>
+        </div>
+      `;
+    }
+    if(state.banner.src){
+      return `
+        <div class="lo-banner">
+          <img src="${state.banner.src}" alt="banner" />
+          <div class="lo-banner-controls">
+            <button class="lo-banner-btn" id="banner-edit-btn">Mainīt</button>
+            <button class="lo-banner-btn" id="banner-remove-btn">Noņemt</button>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="lo-banner">
+        <div class="lo-banner-empty" id="banner-empty-trigger">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <div>+ PIEVIENOT ATTĒLU VAI GIF</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function moduleTitleLine(){
+    const map = { dashboard: 'root@lifeos:~$ status', habits: 'root@lifeos:~$ ./habits', tasks: 'root@lifeos:~$ ./tasks', goals: 'root@lifeos:~$ ./goals', learning: 'root@lifeos:~$ ./learning', finance: 'root@lifeos:~$ ./finance', health: 'root@lifeos:~$ ./health', journal: 'root@lifeos:~$ ./journal' };
+    return map[state.module] || '';
+  }
+
+  function renderModule(){
+    if(state.module==='dashboard') return renderDashboard();
+    if(state.module==='habits') return renderHabits();
+    if(state.module==='tasks') return renderTasks();
+    if(state.module==='goals') return renderGoals();
+    if(state.module==='learning') return renderLearning();
+    if(state.module==='finance') return renderFinance();
+    if(state.module==='health') return renderHealth();
+    if(state.module==='journal') return renderJournal();
+    return '';
+  }
+
+  // ---------------- DASHBOARD ----------------
+  function renderDashboard(){
+    const today = todayStr();
+    const habits = state.habits.habits;
+    const doneToday = habits.filter(h => state.habits.logs[today] && state.habits.logs[today][h.id]).length;
+    const activeTasks = state.tasks.tasks.filter(t=>!t.done);
+    const doneTasks = state.tasks.tasks.filter(t=>t.done);
+    const avgGoal = state.goals.goals.length ? Math.round(state.goals.goals.reduce((s,g)=>s+g.progress,0)/state.goals.goals.length) : 0;
+    const hasJournalToday = !!state.journal.entries[today];
+    const healthDates = Object.keys(state.health.entries).sort().reverse();
+    const latestHealth = healthDates.length ? state.health.entries[healthDates[0]] : null;
+    const last7 = last7Days();
+    const workoutsThisWeek = last7.reduce((sum, d)=> sum + ((state.health.entries[d] && state.health.entries[d].workouts) ? state.health.entries[d].workouts.length : 0), 0);
+
+    const topTasks = activeTasks.slice(0,4);
+
+    return `
+      <div class="lo-module-title">Pārskats</div>
+      <div class="lo-module-sub">Sistēmas statuss šodienai — ${habits.length ? doneToday+'/'+habits.length+' ieradumi izpildīti' : 'nav vēl neviena ieraduma'}.</div>
+
+      <div class="lo-grid">
+        <div class="lo-card">
+          <div class="lo-card-label">Ieradumi šodien</div>
+          <div class="lo-card-value ${doneToday===habits.length && habits.length>0 ? 'accent':''}">${doneToday}/${habits.length}</div>
+        </div>
+        <div class="lo-card">
+          <div class="lo-card-label">Aktīvi uzdevumi</div>
+          <div class="lo-card-value">${activeTasks.length}</div>
+        </div>
+        <div class="lo-card">
+          <div class="lo-card-label">Mērķu progress (vid.)</div>
+          <div class="lo-card-value warn">${avgGoal}%</div>
+        </div>
+        <div class="lo-card">
+          <div class="lo-card-label">Dienasgrāmata šodien</div>
+          <div class="lo-card-value ${hasJournalToday ? 'accent' : ''}">${hasJournalToday ? 'IERAKSTĪTS' : '—'}</div>
+        </div>
+        <div class="lo-card">
+          <div class="lo-card-label">Pēdējais miegs</div>
+          <div class="lo-card-value accent">${latestHealth && latestHealth.sleepHours ? latestHealth.sleepHours+'h' : '—'}</div>
+        </div>
+        <div class="lo-card">
+          <div class="lo-card-label">Miera pulss</div>
+          <div class="lo-card-value">${latestHealth && latestHealth.restingHR ? latestHealth.restingHR+' bpm' : '—'}</div>
+        </div>
+        <div class="lo-card">
+          <div class="lo-card-label">Treniņi (7 d.)</div>
+          <div class="lo-card-value warn">${workoutsThisWeek}</div>
+        </div>
+      </div>
+
+      <div class="lo-panel">
+        <div class="lo-panel-title">${icon('habits')} Aktīvie procesi (ieradumi)</div>
+        ${habits.length ? habits.map(h=>{
+          const on = !!(state.habits.logs[today] && state.habits.logs[today][h.id]);
+          const streak = currentStreak(h.id);
+          return `<div class="lo-proc-row">
+            <div class="lo-proc-dot ${on?'on':''}"></div>
+            <div class="lo-proc-name">${escapeHtml(h.name)} <span style="color:var(--text-dim);font-size:11px;">// ${h.area}</span></div>
+            <div class="lo-proc-meta">streak: ${streak}d</div>
+          </div>`;
+        }).join('') : `<div class="lo-empty">Nav pievienotu ieradumu. Ej uz "Ieradumi", lai sāktu.</div>`}
+      </div>
+
+      ${renderCalendar()}
+
+      ${renderFinancePanel()}
+
+      <div class="lo-panel">
+        <div class="lo-panel-title">${icon('tasks')} Tuvākie uzdevumi</div>
+        ${topTasks.length ? topTasks.map(t=>`
+          <div class="lo-task-item" style="border-bottom:1px solid var(--border);">
+            <div class="lo-task-check" data-toggle-task="${t.id}"></div>
+            <div class="lo-task-text">${escapeHtml(t.text)}</div>
+            <div class="lo-task-tags">
+              ${t.priority ? `<span class="lo-tag prio-${t.priority}">${t.priority}</span>` : ''}
+              ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
+            </div>
+          </div>
+        `).join('') : `<div class="lo-empty">Nav aktīvu uzdevumu. Baudi mieru — vai pievieno jaunu "Uzdevumos".</div>`}
+      </div>
+    `;
+  }
+
+  // ---------------- HABITS ----------------
+  function renderHabits(){
+    const week = last7Days();
+    const habits = state.habits.habits;
+    return `
+      <div class="lo-module-title">Ieradumi</div>
+      <div class="lo-module-sub">Ikdienas fona procesi. Atzīmē katru dienu, kad ieradums izpildīts.</div>
+
+      <div class="lo-panel">
+        <div class="lo-row-form">
+          <input class="lo-input" id="new-habit-name" placeholder="Jauna ieraduma nosaukums (piem., 30 min lasīšana)" />
+          <select class="lo-select" id="new-habit-area">
+            ${AREAS.map(a=>`<option value="${a}">${a}</option>`).join('')}
+          </select>
+          <button class="lo-btn" id="add-habit-btn">+ Pievienot</button>
+        </div>
+
+        ${habits.length ? habits.map(h=>{
+          const streak = currentStreak(h.id);
+          return `
+          <div class="lo-habit-item">
+            <div class="lo-habit-name">
+              <div class="lo-habit-title">${escapeHtml(h.name)}</div>
+              <div class="lo-habit-area">${h.area}</div>
+            </div>
+            <div class="lo-streak-badge">🔥 ${streak}d</div>
+            <div class="lo-week">
+              ${week.map(d=>{
+                const on = !!(state.habits.logs[d] && state.habits.logs[d][h.id]);
+                return `<div class="lo-day-box ${on?'done':''}" data-habit-day="${h.id}|${d}">${dayLabel(d)}</div>`;
+              }).join('')}
+            </div>
+            <button class="lo-btn danger-ghost" data-del-habit="${h.id}">✕</button>
+          </div>`;
+        }).join('') : `<div class="lo-empty">Vēl nav neviena ieraduma. Pievieno pirmo augstāk!</div>`}
+      </div>
+    `;
+  }
+
+  // ---------------- TASKS ----------------
+  function renderTasks(){
+    let list = state.tasks.tasks;
+    if(state.taskFilter==='active') list = list.filter(t=>!t.done);
+    if(state.taskFilter==='done') list = list.filter(t=>t.done);
+
+    return `
+      <div class="lo-module-title">Uzdevumi</div>
+      <div class="lo-module-sub">Aktīvie procesi rindā. Izpildi, pabeidz, tīri.</div>
+
+      <div class="lo-panel">
+        <div class="lo-row-form">
+          <input class="lo-input" id="new-task-text" placeholder="Jauns uzdevums..." />
+          <input class="lo-input" id="new-task-project" placeholder="Projekts (nav obligāti)" style="flex:1;min-width:120px;" />
+          <input type="date" class="lo-input" id="new-task-due" style="flex:1;min-width:130px;" />
+          <select class="lo-select" id="new-task-priority">
+            <option value="Zema">Zema</option>
+            <option value="Vidēja" selected>Vidēja</option>
+            <option value="Augsta">Augsta</option>
+          </select>
+          <button class="lo-btn" id="add-task-btn">+ Pievienot</button>
+        </div>
+
+        <div class="lo-tabs">
+          <div class="lo-tab ${state.taskFilter==='all'?'active':''}" data-filter="all">Visi (${state.tasks.tasks.length})</div>
+          <div class="lo-tab ${state.taskFilter==='active'?'active':''}" data-filter="active">Aktīvi (${state.tasks.tasks.filter(t=>!t.done).length})</div>
+          <div class="lo-tab ${state.taskFilter==='done'?'active':''}" data-filter="done">Pabeigti (${state.tasks.tasks.filter(t=>t.done).length})</div>
+        </div>
+
+        ${list.length ? list.map(t=>`
+          <div class="lo-task-item">
+            <div class="lo-task-check ${t.done?'done':''}" data-toggle-task="${t.id}">${t.done ? '✓' : ''}</div>
+            <div class="lo-task-text ${t.done?'done':''}">${escapeHtml(t.text)}</div>
+            <div class="lo-task-tags">
+              <span class="lo-tag prio-${t.priority}">${t.priority}</span>
+              ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
+              ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${t.dueDate}</span>` : ''}
+              <button class="lo-btn danger-ghost" data-del-task="${t.id}">✕</button>
+            </div>
+          </div>
+        `).join('') : `<div class="lo-empty">Nekā šeit. Tīrs saraksts.</div>`}
+      </div>
+    `;
+  }
+
+  // ---------------- GOALS ----------------
+  function renderGoals(){
+    return `
+      <div class="lo-module-title">Mērķi</div>
+      <div class="lo-module-sub">Ilgtermiņa virzieni pa dzīves jomām.</div>
+
+      <div class="lo-panel">
+        <div class="lo-row-form">
+          <input class="lo-input" id="new-goal-text" placeholder="Jauns mērķis (piem., Noskriet 10km)" />
+          <select class="lo-select" id="new-goal-area">
+            ${AREAS.map(a=>`<option value="${a}">${a}</option>`).join('')}
+          </select>
+          <button class="lo-btn" id="add-goal-btn">+ Pievienot</button>
+        </div>
+
+        ${state.goals.goals.length ? state.goals.goals.map(g=>`
+          <div class="lo-goal-item">
+            <div class="lo-goal-top">
+              <div class="lo-goal-text">${escapeHtml(g.text)}</div>
+              <div class="lo-goal-area-tag">${g.area}</div>
+            </div>
+            <div class="lo-progress-track"><div class="lo-progress-fill" style="width:${g.progress}%"></div></div>
+            <div class="lo-goal-controls">
+              <input type="range" min="0" max="100" value="${g.progress}" data-goal-range="${g.id}" />
+              <div class="lo-goal-pct">${g.progress}%</div>
+              <button class="lo-btn danger-ghost" data-del-goal="${g.id}">✕</button>
+            </div>
+          </div>
+        `).join('') : `<div class="lo-empty">Nav vēl neviena mērķa. Ko vēlies sasniegt?</div>`}
+      </div>
+    `;
+  }
+
+  // ---------------- LEARNING ----------------
+  function trackProgress(track){
+    if(!track.topics.length) return 0;
+    const done = track.topics.filter(t=>t.done).length;
+    return Math.round((done/track.topics.length)*100);
+  }
+
+  function renderLearning(){
+    const tracks = state.learning.tracks;
+    return `
+      <div class="lo-module-title">Mācīšanās</div>
+      <div class="lo-module-sub">Prasmju izsekošana — katrai jomai (Linux, Python u.c.) sava karte ar tēmām un piezīmēm.</div>
+
+      <div class="lo-panel">
+        <div class="lo-row-form">
+          <input class="lo-input" id="new-track-name" placeholder="Jauna prasme (piem., Linux, Python, Ģitāra)" />
+          <button class="lo-btn" id="add-track-btn">+ Pievienot</button>
+        </div>
+      </div>
+
+      ${tracks.length ? tracks.map(tr=>{
+        const pct = trackProgress(tr);
+        const notesOpen = !!state.openNotes[tr.id];
+        return `
+        <div class="lo-track-card">
+          <div class="lo-track-header">
+            <div class="lo-track-name">${escapeHtml(tr.name)}</div>
+            <div class="lo-track-pct">${pct}%</div>
+            <button class="lo-btn danger-ghost" data-del-track="${tr.id}">✕</button>
+          </div>
+          <div class="lo-progress-track"><div class="lo-progress-fill" style="width:${pct}%"></div></div>
+
+          ${tr.topics.length ? tr.topics.map(top=>`
+            <div class="lo-topic-row">
+              <div class="lo-task-check ${top.done?'done':''}" data-toggle-topic="${tr.id}|${top.id}">${top.done?'✓':''}</div>
+              <div class="lo-topic-text ${top.done?'done':''}">${escapeHtml(top.text)}</div>
+              <button class="lo-btn danger-ghost" data-del-topic="${tr.id}|${top.id}">✕</button>
+            </div>
+          `).join('') : `<div class="lo-empty" style="padding:10px 0;">Vēl nav tēmu. Pievieno pirmo zemāk.</div>`}
+
+          <div class="lo-topic-add-row">
+            <input class="lo-input" placeholder="Jauna tēma / atskaites punkts..." data-topic-input="${tr.id}" />
+            <button class="lo-btn ghost" data-add-topic="${tr.id}">+ Tēma</button>
+          </div>
+
+          <div class="lo-track-notes-toggle" data-toggle-notes="${tr.id}">${notesOpen ? '▾ SLĒPT PIEZĪMES' : '▸ PIEZĪMES / ŽURNĀLS'}</div>
+          ${notesOpen ? `
+            <div class="lo-track-notes">
+              <textarea class="lo-textarea" data-notes-track="${tr.id}" placeholder="Resursi, linki, atzīmes par progresu...">${escapeHtml(tr.notes||'')}</textarea>
+              <div style="margin-top:8px;"><button class="lo-btn ghost" data-save-notes="${tr.id}">Saglabāt piezīmes</button></div>
+            </div>
+          ` : ''}
+        </div>
+        `;
+      }).join('') : `<div class="lo-empty">Vēl nav pievienotu prasmju. Sāc ar Linux, Python vai kaut ko citu!</div>`}
+    `;
+  }
+
+  // ---------------- FINANCE ----------------
+  function monthTotals(year, month){
+    const key = `${year}-${String(month+1).padStart(2,'0')}`;
+    let income = 0, expense = 0; const byCategory = {};
+    state.finance.transactions.forEach(t=>{
+      if(t.date.slice(0,7)===key){
+        if(t.type==='income') income += t.amount;
+        else { expense += t.amount; byCategory[t.category] = (byCategory[t.category]||0) + t.amount; }
+      }
+    });
+    return { income, expense, byCategory };
+  }
+  function yearTotals(year){
+    const income = new Array(12).fill(0), expense = new Array(12).fill(0);
+    state.finance.transactions.forEach(t=>{
+      const [y,m] = t.date.split('-');
+      if(parseInt(y,10)===year){
+        const idx = parseInt(m,10)-1;
+        if(t.type==='income') income[idx] += t.amount; else expense[idx] += t.amount;
+      }
+    });
+    return { income, expense };
+  }
+  function monthDailyTotals(year, month){
+    const days = new Date(year, month+1, 0).getDate();
+    const income = new Array(days).fill(0), expense = new Array(days).fill(0);
+    state.finance.transactions.forEach(t=>{
+      const d = new Date(t.date+'T00:00:00');
+      if(d.getFullYear()===year && d.getMonth()===month){
+        const idx = d.getDate()-1;
+        if(t.type==='income') income[idx] += t.amount; else expense[idx] += t.amount;
+      }
+    });
+    return { income, expense, days };
+  }
+  function palette(n){
+    const colors = ['#4FD1C5','#E8A33D','#E8615C','#7C9EF5','#C77DFF','#5EEAD4','#F4A261','#94A3B8'];
+    const out = []; for(let i=0;i<n;i++) out.push(colors[i%colors.length]); return out;
+  }
+  function baseBarOptions(){
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#B8C0CC', font: { family: 'Inter', size: 11 } } } },
+      scales: {
+        x: { ticks: { color: '#7B8494', font: { size: 10 } }, grid: { color: '#212733' } },
+        y: { ticks: { color: '#7B8494', font: { size: 10 } }, grid: { color: '#212733' }, beginAtZero: true }
+      }
+    };
+  }
+
+  function renderFinancePanel(){
+    const { income, expense } = monthTotals(state.finVizYear, state.finVizMonth);
+    const balance = income - expense;
+    const monthLabel = new Date(state.finVizYear, state.finVizMonth, 1).toLocaleDateString('lv-LV', { month: 'long', year: 'numeric' });
+    return `
+      <div class="lo-panel">
+        <div class="lo-panel-title" style="justify-content:space-between;">
+          <span style="display:flex;align-items:center;gap:8px;">${icon('finance')} Finanses</span>
+          <div class="lo-fin-tabs">
+            <div class="lo-tab ${state.financeView==='summary'?'active':''}" data-finview="summary">Kopsavilkums</div>
+            <div class="lo-tab ${state.financeView==='month'?'active':''}" data-finview="month">Mēnesis</div>
+            <div class="lo-tab ${state.financeView==='year'?'active':''}" data-finview="year">Gads</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="lo-cal-month-label">${state.financeView==='year' ? state.finVizYear : monthLabel}</div>
+          <div class="lo-cal-nav">
+            <button class="lo-cal-nav-btn" id="fin-prev">‹</button>
+            <button class="lo-cal-today-btn" id="fin-today">Šodien</button>
+            <button class="lo-cal-nav-btn" id="fin-next">›</button>
+          </div>
+        </div>
+        <div class="lo-grid" style="margin-bottom:8px;">
+          <div class="lo-card"><div class="lo-card-label">Ienākumi</div><div class="lo-card-value accent">€${income.toFixed(2)}</div></div>
+          <div class="lo-card"><div class="lo-card-label">Izdevumi</div><div class="lo-card-value" style="color:var(--danger);">€${expense.toFixed(2)}</div></div>
+          <div class="lo-card"><div class="lo-card-label">Bilance</div><div class="lo-card-value" style="color:${balance>=0?'var(--accent)':'var(--danger)'};">€${balance.toFixed(2)}</div></div>
+        </div>
+        <div class="lo-chart-wrap"><canvas id="finance-chart"></canvas></div>
+      </div>
+    `;
+  }
+
+  function mountFinanceChart(){
+    const canvas = root.querySelector('#finance-chart');
+    if(!canvas || !window.Chart) return;
+    if(financeChartInstance){ financeChartInstance.destroy(); financeChartInstance = null; }
+    const ctx = canvas.getContext('2d');
+    let config;
+    if(state.financeView==='summary'){
+      const { income, expense, byCategory } = monthTotals(state.finVizYear, state.finVizMonth);
+      const labels = Object.keys(byCategory);
+      if(labels.length===0){
+        config = { type:'bar', data:{ labels:['Šis mēnesis'], datasets:[
+          { label:'Ienākumi', data:[income], backgroundColor:'#4FD1C5' },
+          { label:'Izdevumi', data:[expense], backgroundColor:'#E8615C' }
+        ]}, options: baseBarOptions() };
+      } else {
+        config = { type:'doughnut', data:{ labels, datasets:[{ data: Object.values(byCategory), backgroundColor: palette(labels.length), borderWidth: 0 }] },
+          options: { responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{ legend:{ position:'bottom', labels:{ color:'#B8C0CC', font:{family:'Inter', size:11} } } } } };
+      }
+    } else if(state.financeView==='month'){
+      const { income, expense, days } = monthDailyTotals(state.finVizYear, state.finVizMonth);
+      const labels = Array.from({length: days}, (_,i)=>String(i+1));
+      config = { type:'bar', data:{ labels, datasets:[
+        { label:'Ienākumi', data: income, backgroundColor:'#4FD1C5' },
+        { label:'Izdevumi', data: expense, backgroundColor:'#E8615C' }
+      ]}, options: baseBarOptions() };
+    } else {
+      const { income, expense } = yearTotals(state.finVizYear);
+      const labels = ['Jan','Feb','Mar','Apr','Mai','Jūn','Jūl','Aug','Sep','Okt','Nov','Dec'];
+      config = { type:'bar', data:{ labels, datasets:[
+        { label:'Ienākumi', data: income, backgroundColor:'#4FD1C5' },
+        { label:'Izdevumi', data: expense, backgroundColor:'#E8615C' }
+      ]}, options: baseBarOptions() };
+    }
+    financeChartInstance = new Chart(ctx, config);
+  }
+
+  function renderTxList(){
+    const sorted = [...state.finance.transactions].sort((a,b)=> b.date.localeCompare(a.date));
+    if(!sorted.length) return `<div class="lo-empty">Vēl nav neviena ieraksta.</div>`;
+    return sorted.map(t=>`
+      <div class="lo-task-item">
+        <div class="lo-task-text" style="flex:0 0 88px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);">${t.date}</div>
+        <div class="lo-task-text">${escapeHtml(t.category)}${t.note ? ' — '+escapeHtml(t.note) : ''}</div>
+        <div class="lo-task-tags">
+          <span class="lo-tag" style="color:${t.type==='income' ? 'var(--accent)' : 'var(--danger)'};">${t.type==='income' ? '+' : '−'}€${t.amount.toFixed(2)}</span>
+          <button class="lo-btn danger-ghost" data-del-tx="${t.id}">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderFinance(){
+    return `
+      <div class="lo-module-title">Finanses</div>
+      <div class="lo-module-sub">Ienākumu un izdevumu uzskaite.</div>
+
+      <div class="lo-panel">
+        <div class="lo-row-form">
+          <select class="lo-select" id="new-tx-type" style="flex:0 0 120px;">
+            <option value="expense">Izdevums</option>
+            <option value="income">Ienākums</option>
+          </select>
+          <input class="lo-input" id="new-tx-amount" type="number" step="0.01" min="0" placeholder="Summa (€)" style="flex:1;min-width:100px;" />
+          <input class="lo-input" id="new-tx-category" list="tx-category-list" placeholder="Kategorija" style="flex:1;min-width:120px;" />
+          <datalist id="tx-category-list">
+            <option value="Pārtika"></option>
+            <option value="Transports"></option>
+            <option value="Mājoklis"></option>
+            <option value="Izklaide"></option>
+            <option value="Veselība"></option>
+            <option value="Alga"></option>
+            <option value="Citi"></option>
+          </datalist>
+          <input type="date" class="lo-input" id="new-tx-date" style="flex:1;min-width:130px;" value="${todayStr()}" />
+        </div>
+        <div class="lo-row-form">
+          <input class="lo-input" id="new-tx-note" placeholder="Piezīme (nav obligāti)" />
+          <button class="lo-btn" id="add-tx-btn">+ Pievienot</button>
+        </div>
+      </div>
+
+      <div class="lo-panel">
+        <div class="lo-panel-title">Darījumi</div>
+        ${renderTxList()}
+      </div>
+    `;
+  }
+
+  // ---------------- HEALTH ----------------
+  function getHealthEntry(date){
+    return state.health.entries[date] || { sleepHours: null, sleepQuality: '', restingHR: null, workouts: [] };
+  }
+
+  function renderHealth(){
+    const entry = getHealthEntry(state.healthDate);
+    const historyDates = Object.keys(state.health.entries).sort().reverse();
+
+    return `
+      <div class="lo-module-title">Veselība</div>
+      <div class="lo-module-sub">Miega, treniņu un pulsa uzskaite — ievadi datus no Garmin / Samsung Health.</div>
+
+      <div class="lo-panel">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;">
+          <input type="date" class="lo-input" id="health-date-picker" style="max-width:180px;" value="${state.healthDate}" />
+        </div>
+
+        <div class="lo-health-row">
+          <div class="lo-health-field">
+            <label>Miega ilgums (h)</label>
+            <input class="lo-input" type="number" step="0.1" min="0" max="24" id="health-sleep-hours" value="${entry.sleepHours ?? ''}" placeholder="7.5" />
+          </div>
+          <div class="lo-health-field">
+            <label>Miega kvalitāte</label>
+            <select class="lo-select" id="health-sleep-quality">
+              <option value="" ${!entry.sleepQuality ? 'selected':''}>—</option>
+              <option value="Slikta" ${entry.sleepQuality==='Slikta'?'selected':''}>Slikta</option>
+              <option value="Vidēja" ${entry.sleepQuality==='Vidēja'?'selected':''}>Vidēja</option>
+              <option value="Laba" ${entry.sleepQuality==='Laba'?'selected':''}>Laba</option>
+              <option value="Izcila" ${entry.sleepQuality==='Izcila'?'selected':''}>Izcila</option>
+            </select>
+          </div>
+          <div class="lo-health-field">
+            <label>Miera pulss (bpm)</label>
+            <input class="lo-input" type="number" min="0" max="250" id="health-resting-hr" value="${entry.restingHR ?? ''}" placeholder="58" />
+          </div>
+        </div>
+        <button class="lo-btn" id="save-health-btn">Saglabāt datus</button>
+      </div>
+
+      <div class="lo-panel">
+        <div class="lo-panel-title">${icon('health')} Treniņi — ${state.healthDate}</div>
+        <div class="lo-row-form">
+          <input class="lo-input" id="new-workout-type" placeholder="Treniņa veids (piem., Skriešana, Peldēšana)" />
+          <input class="lo-input" type="number" min="1" id="new-workout-duration" placeholder="Ilgums (min)" style="flex:0 0 130px;" />
+          <button class="lo-btn" id="add-workout-btn">+ Pievienot</button>
+        </div>
+        ${entry.workouts.length ? entry.workouts.map(w=>`
+          <div class="lo-task-item">
+            <div class="lo-task-text">${escapeHtml(w.type)}</div>
+            <div class="lo-task-tags">
+              <span class="lo-tag">${w.duration} min</span>
+              <button class="lo-btn danger-ghost" data-del-workout="${w.id}">✕</button>
+            </div>
+          </div>
+        `).join('') : `<div class="lo-empty">Šai dienai vēl nav pievienots neviens treniņš.</div>`}
+      </div>
+
+      <div class="lo-panel">
+        <div class="lo-panel-title">Vēsture</div>
+        ${historyDates.length ? historyDates.map(d=>{
+          const e = state.health.entries[d];
+          return `<div class="lo-history-row" data-open-health="${d}">
+            <div class="lo-history-date">${d}</div>
+            <div style="flex:1;">${e.sleepHours ? e.sleepHours+'h miegs' : '—'}${e.restingHR ? ' · '+e.restingHR+' bpm' : ''}${e.workouts.length ? ' · '+e.workouts.length+' treniņš/i' : ''}</div>
+          </div>`;
+        }).join('') : `<div class="lo-empty">Vēl nav ierakstu.</div>`}
+      </div>
+    `;
+  }
+
+  // ---------------- JOURNAL ----------------
+  function renderJournal(){
+    const entries = Object.entries(state.journal.entries).sort((a,b)=> b[0].localeCompare(a[0]));
+    const currentText = state.journal.entries[state.journalDate] || '';
+    return `
+      <div class="lo-module-title">Dienasgrāmata</div>
+      <div class="lo-module-sub">Ikdienas refleksija. Ko šodien iemācījies, sajuti, paveici?</div>
+
+      <div class="lo-panel">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
+          <input type="date" class="lo-input" id="journal-date-picker" style="max-width:180px;" value="${state.journalDate}" />
+          <button class="lo-btn" id="save-journal-btn">Saglabāt ierakstu</button>
+        </div>
+        <textarea class="lo-textarea" id="journal-textarea" placeholder="Raksti šeit...">${escapeHtml(currentText)}</textarea>
+      </div>
+
+      <div class="lo-panel">
+        <div class="lo-panel-title">${icon('journal')} Iepriekšējie ieraksti</div>
+        ${entries.length ? entries.map(([date, text])=>`
+          <div class="lo-journal-entry" data-open-journal="${date}">
+            <div class="lo-journal-date">${date}</div>
+            <div class="lo-journal-preview">${escapeHtml(text.slice(0,120))}</div>
+          </div>
+        `).join('') : `<div class="lo-empty">Vēl nav ierakstu.</div>`}
+      </div>
+    `;
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function attachEvents(){
+    const logoutBtn = root.querySelector('#logout-btn');
+    if(logoutBtn){
+      logoutBtn.addEventListener('click', async ()=>{
+        await sb.auth.signOut();
+      });
+    }
+
+    const bannerEmptyTrigger = root.querySelector('#banner-empty-trigger');
+    if(bannerEmptyTrigger){
+      bannerEmptyTrigger.addEventListener('click', ()=>{ state.bannerEditing = true; render(); });
+    }
+    const bannerEditBtn = root.querySelector('#banner-edit-btn');
+    if(bannerEditBtn){
+      bannerEditBtn.addEventListener('click', ()=>{ state.bannerEditing = true; render(); });
+    }
+    const bannerRemoveBtn = root.querySelector('#banner-remove-btn');
+    if(bannerRemoveBtn){
+      bannerRemoveBtn.addEventListener('click', async ()=>{
+        state.banner = { src: null };
+        await safeSet('banner-data', state.banner);
+        render();
+      });
+    }
+    const bannerCancelBtn = root.querySelector('#banner-cancel-btn');
+    if(bannerCancelBtn){
+      bannerCancelBtn.addEventListener('click', ()=>{ state.bannerEditing = false; render(); });
+    }
+    const bannerUploadBtn = root.querySelector('#banner-upload-btn');
+    const bannerFileInput = root.querySelector('#banner-file-input');
+    if(bannerUploadBtn && bannerFileInput){
+      bannerUploadBtn.addEventListener('click', ()=> bannerFileInput.click());
+      bannerFileInput.addEventListener('change', (e)=>{
+        const file = e.target.files[0];
+        if(!file) return;
+        if(file.size > 4*1024*1024){
+          alert('Fails ir pārāk liels (maks. ~4MB). Mēģini ar mazāku failu vai izmanto saiti.');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = async ()=>{
+          state.banner = { src: reader.result };
+          await safeSet('banner-data', state.banner);
+          state.bannerEditing = false;
+          render();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    const bannerSaveUrlBtn = root.querySelector('#banner-save-url-btn');
+    if(bannerSaveUrlBtn){
+      bannerSaveUrlBtn.addEventListener('click', async ()=>{
+        const urlInput = root.querySelector('#banner-url-input');
+        const url = urlInput.value.trim();
+        if(!url) return;
+        state.banner = { src: url };
+        await safeSet('banner-data', state.banner);
+        state.bannerEditing = false;
+        render();
+      });
+    }
+
+    const ytSaveBtn = root.querySelector('#yt-save-btn');
+    if(ytSaveBtn){
+      ytSaveBtn.addEventListener('click', async ()=>{
+        const input = root.querySelector('#yt-url-input');
+        const id = extractYouTubeId(input.value);
+        if(!id){ alert('Nevarēju atpazīt YouTube saiti. Pārbaudi un mēģini vēlreiz.'); return; }
+        state.youtube = { videoId: id };
+        state.youtubeEditing = false;
+        await safeSet('youtube-data', state.youtube);
+        render();
+      });
+    }
+    const ytChangeBtn = root.querySelector('#yt-change-btn');
+    if(ytChangeBtn){
+      ytChangeBtn.addEventListener('click', ()=>{ state.youtubeEditing = true; render(); });
+    }
+
+    root.querySelectorAll('[data-nav]').forEach(el=>{
+      el.addEventListener('click', ()=>{ state.module = el.getAttribute('data-nav'); render(); });
+    });
+
+    // Calendar
+    const calPrev = root.querySelector('#cal-prev');
+    if(calPrev){
+      calPrev.addEventListener('click', ()=>{
+        state.calMonth--;
+        if(state.calMonth<0){ state.calMonth=11; state.calYear--; }
+        render();
+      });
+    }
+    const calNext = root.querySelector('#cal-next');
+    if(calNext){
+      calNext.addEventListener('click', ()=>{
+        state.calMonth++;
+        if(state.calMonth>11){ state.calMonth=0; state.calYear++; }
+        render();
+      });
+    }
+    const calToday = root.querySelector('#cal-today');
+    if(calToday){
+      calToday.addEventListener('click', ()=>{
+        const now = new Date();
+        state.calYear = now.getFullYear();
+        state.calMonth = now.getMonth();
+        render();
+      });
+    }
+    root.querySelectorAll('[data-cal-day]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        state.journalDate = el.getAttribute('data-cal-day');
+        state.module = 'journal';
+        render();
+      });
+    });
+
+    // Habits
+    const addHabitBtn = root.querySelector('#add-habit-btn');
+    if(addHabitBtn){
+      addHabitBtn.addEventListener('click', async ()=>{
+        const nameInput = root.querySelector('#new-habit-name');
+        const areaSelect = root.querySelector('#new-habit-area');
+        const name = nameInput.value.trim();
+        if(!name) return;
+        state.habits.habits.push({ id: uid(), name, area: areaSelect.value });
+        await safeSet('habits-data', state.habits);
+        render();
+      });
+    }
+    root.querySelectorAll('[data-habit-day]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [habitId, date] = el.getAttribute('data-habit-day').split('|');
+        if(!state.habits.logs[date]) state.habits.logs[date] = {};
+        state.habits.logs[date][habitId] = !state.habits.logs[date][habitId];
+        await safeSet('habits-data', state.habits);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-del-habit]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-del-habit');
+        state.habits.habits = state.habits.habits.filter(h=>h.id!==id);
+        await safeSet('habits-data', state.habits);
+        render();
+      });
+    });
+
+    // Tasks
+    const addTaskBtn = root.querySelector('#add-task-btn');
+    if(addTaskBtn){
+      addTaskBtn.addEventListener('click', async ()=>{
+        const textInput = root.querySelector('#new-task-text');
+        const projectInput = root.querySelector('#new-task-project');
+        const dueInput = root.querySelector('#new-task-due');
+        const prioSelect = root.querySelector('#new-task-priority');
+        const text = textInput.value.trim();
+        if(!text) return;
+        state.tasks.tasks.unshift({ id: uid(), text, project: projectInput.value.trim(), dueDate: dueInput.value || null, priority: prioSelect.value, done: false });
+        await safeSet('tasks-data', state.tasks);
+        render();
+      });
+    }
+    root.querySelectorAll('[data-toggle-task]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-toggle-task');
+        const t = state.tasks.tasks.find(t=>t.id===id);
+        if(t){ t.done = !t.done; await safeSet('tasks-data', state.tasks); render(); }
+      });
+    });
+    root.querySelectorAll('[data-del-task]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-del-task');
+        state.tasks.tasks = state.tasks.tasks.filter(t=>t.id!==id);
+        await safeSet('tasks-data', state.tasks);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-filter]').forEach(el=>{
+      el.addEventListener('click', ()=>{ state.taskFilter = el.getAttribute('data-filter'); render(); });
+    });
+
+    // Goals
+    const addGoalBtn = root.querySelector('#add-goal-btn');
+    if(addGoalBtn){
+      addGoalBtn.addEventListener('click', async ()=>{
+        const textInput = root.querySelector('#new-goal-text');
+        const areaSelect = root.querySelector('#new-goal-area');
+        const text = textInput.value.trim();
+        if(!text) return;
+        state.goals.goals.push({ id: uid(), text, area: areaSelect.value, progress: 0 });
+        await safeSet('goals-data', state.goals);
+        render();
+      });
+    }
+    root.querySelectorAll('[data-goal-range]').forEach(el=>{
+      el.addEventListener('input', ()=>{
+        const id = el.getAttribute('data-goal-range');
+        const g = state.goals.goals.find(g=>g.id===id);
+        if(g){
+          g.progress = parseInt(el.value,10);
+          const item = el.closest('.lo-goal-item');
+          item.querySelector('.lo-progress-fill').style.width = g.progress+'%';
+          item.querySelector('.lo-goal-pct').textContent = g.progress+'%';
+        }
+      });
+      el.addEventListener('change', async ()=>{ await safeSet('goals-data', state.goals); });
+    });
+    root.querySelectorAll('[data-del-goal]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-del-goal');
+        state.goals.goals = state.goals.goals.filter(g=>g.id!==id);
+        await safeSet('goals-data', state.goals);
+        render();
+      });
+    });
+
+    // Learning
+    const addTrackBtn = root.querySelector('#add-track-btn');
+    if(addTrackBtn){
+      addTrackBtn.addEventListener('click', async ()=>{
+        const nameInput = root.querySelector('#new-track-name');
+        const name = nameInput.value.trim();
+        if(!name) return;
+        state.learning.tracks.push({ id: uid(), name, topics: [], notes: '' });
+        await safeSet('learning-data', state.learning);
+        render();
+      });
+    }
+    root.querySelectorAll('[data-del-track]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-del-track');
+        state.learning.tracks = state.learning.tracks.filter(t=>t.id!==id);
+        await safeSet('learning-data', state.learning);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-add-topic]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const trackId = el.getAttribute('data-add-topic');
+        const input = root.querySelector(`[data-topic-input="${trackId}"]`);
+        const text = input.value.trim();
+        if(!text) return;
+        const track = state.learning.tracks.find(t=>t.id===trackId);
+        track.topics.push({ id: uid(), text, done: false });
+        await safeSet('learning-data', state.learning);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-toggle-topic]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [trackId, topicId] = el.getAttribute('data-toggle-topic').split('|');
+        const track = state.learning.tracks.find(t=>t.id===trackId);
+        const topic = track.topics.find(t=>t.id===topicId);
+        topic.done = !topic.done;
+        await safeSet('learning-data', state.learning);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-del-topic]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [trackId, topicId] = el.getAttribute('data-del-topic').split('|');
+        const track = state.learning.tracks.find(t=>t.id===trackId);
+        track.topics = track.topics.filter(t=>t.id!==topicId);
+        await safeSet('learning-data', state.learning);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-toggle-notes]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const id = el.getAttribute('data-toggle-notes');
+        state.openNotes[id] = !state.openNotes[id];
+        render();
+      });
+    });
+    root.querySelectorAll('[data-save-notes]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const trackId = el.getAttribute('data-save-notes');
+        const textarea = root.querySelector(`[data-notes-track="${trackId}"]`);
+        const track = state.learning.tracks.find(t=>t.id===trackId);
+        track.notes = textarea.value;
+        await safeSet('learning-data', state.learning);
+        render();
+      });
+    });
+
+    // Finance
+    root.querySelectorAll('[data-finview]').forEach(el=>{
+      el.addEventListener('click', ()=>{ state.financeView = el.getAttribute('data-finview'); render(); });
+    });
+    const finPrev = root.querySelector('#fin-prev');
+    if(finPrev){
+      finPrev.addEventListener('click', ()=>{
+        if(state.financeView==='year'){ state.finVizYear--; }
+        else { state.finVizMonth--; if(state.finVizMonth<0){ state.finVizMonth=11; state.finVizYear--; } }
+        render();
+      });
+    }
+    const finNext = root.querySelector('#fin-next');
+    if(finNext){
+      finNext.addEventListener('click', ()=>{
+        if(state.financeView==='year'){ state.finVizYear++; }
+        else { state.finVizMonth++; if(state.finVizMonth>11){ state.finVizMonth=0; state.finVizYear++; } }
+        render();
+      });
+    }
+    const finToday = root.querySelector('#fin-today');
+    if(finToday){
+      finToday.addEventListener('click', ()=>{
+        const now = new Date();
+        state.finVizYear = now.getFullYear();
+        state.finVizMonth = now.getMonth();
+        render();
+      });
+    }
+    const addTxBtn = root.querySelector('#add-tx-btn');
+    if(addTxBtn){
+      addTxBtn.addEventListener('click', async ()=>{
+        const typeSel = root.querySelector('#new-tx-type');
+        const amountInput = root.querySelector('#new-tx-amount');
+        const categoryInput = root.querySelector('#new-tx-category');
+        const dateInput = root.querySelector('#new-tx-date');
+        const noteInput = root.querySelector('#new-tx-note');
+        const amount = parseFloat(amountInput.value);
+        const category = categoryInput.value.trim();
+        if(!amount || amount<=0 || !category) return;
+        state.finance.transactions.push({
+          id: uid(), type: typeSel.value, amount,
+          category, date: dateInput.value || todayStr(),
+          note: noteInput.value.trim()
+        });
+        await safeSet('finance-data', state.finance);
+        render();
+      });
+    }
+    root.querySelectorAll('[data-del-tx]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-del-tx');
+        state.finance.transactions = state.finance.transactions.filter(t=>t.id!==id);
+        await safeSet('finance-data', state.finance);
+        render();
+      });
+    });
+    if(state.module==='dashboard'){
+      loadChartJs(()=>{ mountFinanceChart(); });
+    }
+
+    // Health
+    const healthDatePicker = root.querySelector('#health-date-picker');
+    if(healthDatePicker){
+      healthDatePicker.addEventListener('change', ()=>{
+        state.healthDate = healthDatePicker.value;
+        render();
+      });
+    }
+    const saveHealthBtn = root.querySelector('#save-health-btn');
+    if(saveHealthBtn){
+      saveHealthBtn.addEventListener('click', async ()=>{
+        const sleepHoursInput = root.querySelector('#health-sleep-hours');
+        const sleepQualitySelect = root.querySelector('#health-sleep-quality');
+        const restingHRInput = root.querySelector('#health-resting-hr');
+        const current = getHealthEntry(state.healthDate);
+        state.health.entries[state.healthDate] = {
+          ...current,
+          sleepHours: sleepHoursInput.value ? parseFloat(sleepHoursInput.value) : null,
+          sleepQuality: sleepQualitySelect.value,
+          restingHR: restingHRInput.value ? parseInt(restingHRInput.value,10) : null,
+        };
+        await safeSet('health-data', state.health);
+        render();
+      });
+    }
+    const addWorkoutBtn = root.querySelector('#add-workout-btn');
+    if(addWorkoutBtn){
+      addWorkoutBtn.addEventListener('click', async ()=>{
+        const typeInput = root.querySelector('#new-workout-type');
+        const durationInput = root.querySelector('#new-workout-duration');
+        const type = typeInput.value.trim();
+        const duration = parseInt(durationInput.value, 10);
+        if(!type || !duration) return;
+        const current = getHealthEntry(state.healthDate);
+        current.workouts.push({ id: uid(), type, duration });
+        state.health.entries[state.healthDate] = current;
+        await safeSet('health-data', state.health);
+        render();
+      });
+    }
+    root.querySelectorAll('[data-del-workout]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-del-workout');
+        const current = getHealthEntry(state.healthDate);
+        current.workouts = current.workouts.filter(w=>w.id!==id);
+        state.health.entries[state.healthDate] = current;
+        await safeSet('health-data', state.health);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-open-health]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        state.healthDate = el.getAttribute('data-open-health');
+        render();
+      });
+    });
+
+    // Journal
+    const datePicker = root.querySelector('#journal-date-picker');
+    if(datePicker){
+      datePicker.addEventListener('change', ()=>{
+        state.journalDate = datePicker.value;
+        render();
+      });
+    }
+    const saveJournalBtn = root.querySelector('#save-journal-btn');
+    if(saveJournalBtn){
+      saveJournalBtn.addEventListener('click', async ()=>{
+        const textarea = root.querySelector('#journal-textarea');
+        state.journal.entries[state.journalDate] = textarea.value;
+        await safeSet('journal-data', state.journal);
+        render();
+      });
+    }
+    root.querySelectorAll('[data-open-journal]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        state.journalDate = el.getAttribute('data-open-journal');
+        render();
+      });
+    });
+  }
+
+  function renderAuthScreen(){
+    root.innerHTML = `
+      <div class="lo-auth-wrap">
+        <div class="lo-auth-card">
+          <div class="lo-logo" style="margin-bottom:2px;">LIFE<span>OS</span></div>
+          <div class="lo-tagline" style="margin-bottom:20px;">v1.0 // personīgā sistēma</div>
+          <div class="lo-auth-tabs">
+            <div class="lo-tab ${state.authMode==='login'?'active':''}" data-authmode="login">Pieslēgties</div>
+            <div class="lo-tab ${state.authMode==='signup'?'active':''}" data-authmode="signup">Reģistrēties</div>
+          </div>
+          <input class="lo-input" type="email" id="auth-email" placeholder="E-pasts" style="margin-bottom:10px;" />
+          <input class="lo-input" type="password" id="auth-password" placeholder="Parole" style="margin-bottom:14px;" />
+          ${state.authError ? `<div class="lo-auth-error">${escapeHtml(state.authError)}</div>` : ''}
+          <button class="lo-btn" id="auth-submit-btn" style="width:100%;" ${state.authBusy?'disabled':''}>${state.authBusy ? 'Lūdzu uzgaidi...' : (state.authMode==='login' ? 'Pieslēgties' : 'Izveidot kontu')}</button>
+        </div>
+      </div>
+    `;
+    attachAuthEvents();
+  }
+
+  function attachAuthEvents(){
+    root.querySelectorAll('[data-authmode]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        state.authMode = el.getAttribute('data-authmode');
+        state.authError = '';
+        renderAuthScreen();
+      });
+    });
+    const submitBtn = root.querySelector('#auth-submit-btn');
+    const emailInput = root.querySelector('#auth-email');
+    const pwInput = root.querySelector('#auth-password');
+    async function doSubmit(){
+      const email = emailInput.value.trim();
+      const password = pwInput.value;
+      if(!email || !password){ state.authError = 'Ievadi e-pastu un paroli.'; renderAuthScreen(); return; }
+      state.authBusy = true; state.authError = '';
+      renderAuthScreen();
+      let result;
+      if(state.authMode==='login'){
+        result = await sb.auth.signInWithPassword({ email, password });
+      } else {
+        result = await sb.auth.signUp({ email, password });
+      }
+      state.authBusy = false;
+      if(result.error){
+        state.authError = result.error.message;
+        renderAuthScreen();
+        return;
+      }
+      if(state.authMode==='signup' && !result.data.session){
+        state.authMode = 'login';
+        state.authError = 'Konts izveidots! Pārbaudi e-pastu apstiprinājumam, tad pieslēdzies.';
+        renderAuthScreen();
+        return;
+      }
+      state.session = result.data.session;
+      await loadAll();
+    }
+    if(submitBtn) submitBtn.addEventListener('click', doSubmit);
+    if(pwInput) pwInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSubmit(); });
+  }
+
+  async function initAuth(){
+    const { data } = await sb.auth.getSession();
+    state.session = data.session;
+    if(state.session){
+      await loadAll();
+    } else {
+      renderAuthScreen();
+    }
+    sb.auth.onAuthStateChange((event, session)=>{
+      state.session = session;
+      if(session && !state.loaded){
+        loadAll();
+      } else if(!session){
+        state.loaded = false;
+        renderAuthScreen();
+      }
+    });
+  }
+  initAuth();
+})();
+</script>
