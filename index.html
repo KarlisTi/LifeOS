@@ -508,6 +508,37 @@
 .lo-history-row:hover { color: var(--accent); }
 .lo-history-date { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); flex: 0 0 90px; }
 
+/* ---- Habit templates ---- */
+.lo-templates-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--accent); cursor: pointer; margin-bottom: 14px;
+  background: var(--accent-dim); border: 1px solid rgba(79,209,197,0.25);
+  padding: 7px 12px; border-radius: 7px;
+}
+.lo-templates-toggle:hover { opacity: 0.85; }
+.lo-template-intro { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.6; }
+.lo-template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-bottom: 6px; }
+.lo-template-card {
+  background: var(--bg-raised); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;
+}
+.lo-template-name { font-size: 13px; font-weight: 600; line-height: 1.4; }
+.lo-template-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lo-template-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.lo-template-law {
+  font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--warn);
+  background: var(--warn-dim); padding: 3px 7px; border-radius: 4px;
+}
+.lo-template-area {
+  font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-dim);
+}
+.lo-template-add {
+  background: transparent; border: 1px solid var(--border); color: var(--accent);
+  width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 14px; flex-shrink: 0;
+}
+.lo-template-add:hover { background: var(--accent-dim); border-color: var(--accent); }
+
 @media (max-width: 640px) {
   .lo-sidebar { width: 64px; padding: 16px 8px; }
   .lo-logo, .lo-tagline, .lo-status-mini, .lo-nav-item span.lbl { display: none; }
@@ -528,6 +559,24 @@
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const AREAS = ['Veselība','Karjera','Finanses','Attiecības','Izaugsme','Radošums'];
+  const HABIT_TEMPLATES = [
+    { name: 'Izdzert glāzi ūdens uzreiz pēc pamošanās', area: 'Veselība', law: 'Vienkāršu' },
+    { name: '10 pietupieni pirms dušas', area: 'Veselība', law: 'Sasaisti ar esošu ieradumu' },
+    { name: 'Sagatavot treniņdrēbes vakarā iepriekš', area: 'Veselība', law: 'Acīmredzamu' },
+    { name: 'Pastaigāties 15 minūtes svaigā gaisā', area: 'Veselība', law: 'Vienkāršu' },
+    { name: '10 minūtes elpošanas vingrinājums vai meditācija', area: 'Veselība', law: 'Pievilcīgu' },
+    { name: 'Izlasīt 1 lapu grāmatas pirms gulētiešanas', area: 'Izaugsme', law: '2 minūšu likums' },
+    { name: 'Uzrakstīt 1 rindkopu dienasgrāmatā', area: 'Izaugsme', law: '2 minūšu likums' },
+    { name: 'Iemācīties 1 jaunu vārdu vai jēdzienu', area: 'Izaugsme', law: '1% labāk katru dienu' },
+    { name: 'Nofiksēt dienas 3 prioritātes no rīta', area: 'Karjera', law: 'Acīmredzamu' },
+    { name: '5 minūtes plānot rītdienu vakarā', area: 'Karjera', law: 'Vienkāršu' },
+    { name: 'Novākt darba virsmu dienas beigās', area: 'Karjera', law: 'Vienkāršu nākamreiz' },
+    { name: 'Pārskaitīt fiksētu summu uzkrājumos', area: 'Finanses', law: 'Padarīt automātisku' },
+    { name: 'Pierakstīt dienas izdevumus', area: 'Finanses', law: 'Acīmredzamu' },
+    { name: 'Pierakstīt 3 lietas, par ko esi pateicīgs', area: 'Attiecības', law: 'Apmierinošu' },
+    { name: 'Piezvanīt vai uzrakstīt tuviniekam', area: 'Attiecības', law: 'Apmierinošu' },
+    { name: '10 minūtes radoša hobija', area: 'Radošums', law: 'Pievilcīgu' },
+  ];
   const root = document.getElementById('lifeos-app');
 
   const state = {
@@ -537,6 +586,7 @@
     authBusy: false,
     module: 'dashboard',
     taskFilter: 'all',
+    showTemplates: false,
     journalDate: fmtDate(new Date()),
     loaded: false,
     meta: { startDate: fmtDate(new Date()) },
@@ -979,6 +1029,27 @@
     return `
       <div class="lo-module-title">Ieradumi</div>
       <div class="lo-module-sub">Ikdienas fona procesi. Atzīmē katru dienu, kad ieradums izpildīts.</div>
+
+      <div class="lo-templates-toggle" id="templates-toggle">${state.showTemplates ? '▾' : '▸'} IETEIKTIE IERADUMI (Atomic Habits)</div>
+      ${state.showTemplates ? `
+        <div class="lo-panel">
+          <div class="lo-template-intro">Balstīts uz James Clear "Atomic Habits" 4 likumiem — padari to <b style="color:var(--text);">acīmredzamu, pievilcīgu, vienkāršu</b> un <b style="color:var(--text);">apmierinošu</b>. Izvēlies un pievieno tos, kas rezonē ar Tevi.</div>
+          <div class="lo-template-grid">
+            ${HABIT_TEMPLATES.map((t,i)=>`
+              <div class="lo-template-card">
+                <div class="lo-template-name">${escapeHtml(t.name)}</div>
+                <div class="lo-template-meta">
+                  <div class="lo-template-tags">
+                    <span class="lo-template-law">${t.law}</span>
+                    <span class="lo-template-area">${t.area}</span>
+                  </div>
+                  <button class="lo-template-add" data-add-template="${i}">+</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
 
       <div class="lo-panel">
         <div class="lo-row-form">
@@ -1542,6 +1613,20 @@
     });
 
     // Habits
+    const templatesToggle = root.querySelector('#templates-toggle');
+    if(templatesToggle){
+      templatesToggle.addEventListener('click', ()=>{ state.showTemplates = !state.showTemplates; render(); });
+    }
+    root.querySelectorAll('[data-add-template]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const idx = parseInt(el.getAttribute('data-add-template'), 10);
+        const t = HABIT_TEMPLATES[idx];
+        if(!t) return;
+        state.habits.habits.push({ id: uid(), name: t.name, area: t.area });
+        await safeSet('habits-data', state.habits);
+        render();
+      });
+    });
     const addHabitBtn = root.querySelector('#add-habit-btn');
     if(addHabitBtn){
       addHabitBtn.addEventListener('click', async ()=>{
