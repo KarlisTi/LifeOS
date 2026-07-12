@@ -1,3 +1,9 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Life OS</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
@@ -545,10 +551,25 @@
   .lo-logo, .lo-tagline, .lo-status-mini, .lo-nav-item span.lbl { display: none; }
   .lo-player { display: none; }
   .lo-nav-item { justify-content: center; }
-  .lo-content { padding: 18px 14px; }
-  .lo-topbar { padding: 12px 16px; }
+  .lo-content { padding: 14px 10px; }
+  .lo-topbar { padding: 10px 12px; }
+  .lo-topbar-right span:first-child { display: none; }
+  .lo-uptime-badge { font-size: 10px; padding: 3px 8px; }
+  .lo-auth-card { width: auto; max-width: 320px; margin: 0 16px; padding: 24px 18px; }
+  .lo-grid { grid-template-columns: repeat(2, 1fr); }
+  .lo-cal-cell { min-height: 42px; padding: 4px; }
+  .lo-cal-daynum { font-size: 10px; }
+  .lo-row-form { flex-direction: column; }
+  .lo-row-form .lo-input, .lo-row-form .lo-select { flex: 1 1 auto; width: 100%; }
+  .lo-module-title { font-size: 17px; }
+}
+@media (max-width: 400px) {
+  .lo-sidebar { width: 52px; }
+  .lo-grid { grid-template-columns: 1fr; }
 }
 </style>
+</head>
+<body>
 
 <div class="lifeos-root" id="lifeos-app"></div>
 
@@ -2032,3 +2053,5 @@
   initAuth();
 })();
 </script>
+</body>
+</html>
