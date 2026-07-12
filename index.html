@@ -306,6 +306,7 @@
 .lo-btn.danger-ghost:hover { color: var(--danger); border-color: var(--danger); }
 
 /* ---- Habits list ---- */
+
 .lo-habit-item {
   display: flex;
   align-items: center;
@@ -586,7 +587,6 @@
     authBusy: false,
     module: 'dashboard',
     taskFilter: 'all',
-    showTemplates: false,
     journalDate: fmtDate(new Date()),
     loaded: false,
     meta: { startDate: fmtDate(new Date()) },
@@ -596,6 +596,7 @@
     journal: { entries: {} },
     learning: { tracks: [] },
     openNotes: {},
+    showTemplates: true,
     calYear: new Date().getFullYear(),
     calMonth: new Date().getMonth(),
     finance: { transactions: [] },
@@ -1281,10 +1282,11 @@
             <div class="lo-tab ${state.financeView==='summary'?'active':''}" data-finview="summary">Kopsavilkums</div>
             <div class="lo-tab ${state.financeView==='month'?'active':''}" data-finview="month">Mēnesis</div>
             <div class="lo-tab ${state.financeView==='year'?'active':''}" data-finview="year">Gads</div>
+            <div class="lo-tab ${state.financeView==='trend'?'active':''}" data-finview="trend">Līkne</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <div class="lo-cal-month-label">${state.financeView==='year' ? state.finVizYear : monthLabel}</div>
+          <div class="lo-cal-month-label">${state.financeView==='year' || state.financeView==='trend' ? state.finVizYear : monthLabel}</div>
           <div class="lo-cal-nav">
             <button class="lo-cal-nav-btn" id="fin-prev">‹</button>
             <button class="lo-cal-today-btn" id="fin-today">Šodien</button>
@@ -1326,12 +1328,21 @@
         { label:'Ienākumi', data: income, backgroundColor:'#4FD1C5' },
         { label:'Izdevumi', data: expense, backgroundColor:'#E8615C' }
       ]}, options: baseBarOptions() };
-    } else {
+    } else if(state.financeView==='year'){
       const { income, expense } = yearTotals(state.finVizYear);
       const labels = ['Jan','Feb','Mar','Apr','Mai','Jūn','Jūl','Aug','Sep','Okt','Nov','Dec'];
       config = { type:'bar', data:{ labels, datasets:[
         { label:'Ienākumi', data: income, backgroundColor:'#4FD1C5' },
         { label:'Izdevumi', data: expense, backgroundColor:'#E8615C' }
+      ]}, options: baseBarOptions() };
+    } else {
+      const { income, expense } = yearTotals(state.finVizYear);
+      const balanceSeries = income.map((v,i)=> v - expense[i]);
+      const labels = ['Jan','Feb','Mar','Apr','Mai','Jūn','Jūl','Aug','Sep','Okt','Nov','Dec'];
+      config = { type:'line', data:{ labels, datasets:[
+        { label:'Ienākumi', data: income, borderColor:'#4FD1C5', backgroundColor:'rgba(79,209,197,0.1)', tension:0.35, pointRadius:3, fill:true },
+        { label:'Izdevumi', data: expense, borderColor:'#E8615C', backgroundColor:'rgba(232,97,92,0.1)', tension:0.35, pointRadius:3, fill:true },
+        { label:'Bilance', data: balanceSeries, borderColor:'#7C9EF5', borderDash:[5,4], tension:0.35, pointRadius:3, fill:false }
       ]}, options: baseBarOptions() };
     }
     financeChartInstance = new Chart(ctx, config);
@@ -1802,7 +1813,7 @@
     const finPrev = root.querySelector('#fin-prev');
     if(finPrev){
       finPrev.addEventListener('click', ()=>{
-        if(state.financeView==='year'){ state.finVizYear--; }
+        if(state.financeView==='year' || state.financeView==='trend'){ state.finVizYear--; }
         else { state.finVizMonth--; if(state.finVizMonth<0){ state.finVizMonth=11; state.finVizYear--; } }
         render();
       });
@@ -1810,7 +1821,7 @@
     const finNext = root.querySelector('#fin-next');
     if(finNext){
       finNext.addEventListener('click', ()=>{
-        if(state.financeView==='year'){ state.finVizYear++; }
+        if(state.financeView==='year' || state.financeView==='trend'){ state.finVizYear++; }
         else { state.finVizMonth++; if(state.finVizMonth>11){ state.finVizMonth=0; state.finVizYear++; } }
         render();
       });
