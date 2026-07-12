@@ -502,6 +502,14 @@
 .lo-cal-dot.journal { width: 6px; height: 6px; border-radius: 1px; background: transparent; border: 1.5px solid var(--accent); }
 .lo-cal-legend { display: flex; gap: 16px; margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--text-dim); flex-wrap: wrap; }
 .lo-cal-legend-item { display: flex; align-items: center; gap: 6px; }
+.lo-cal-cell.selected { border-color: var(--warn); box-shadow: 0 0 0 1px rgba(232,163,61,0.3); }
+.lo-cal-detail { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.lo-cal-detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.lo-cal-detail-date { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--warn); }
+.lo-cal-detail-section { margin-bottom: 14px; }
+.lo-cal-detail-section:last-child { margin-bottom: 0; }
+.lo-cal-detail-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.lo-journal-preview-box { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; background: var(--bg-raised); border: 1px solid var(--border); border-radius: 7px; padding: 10px 12px; margin-bottom: 8px; white-space: pre-wrap; }
 
 /* ---- Finance ---- */
 .lo-fin-tabs { display: flex; gap: 6px; }
@@ -620,6 +628,7 @@
     showTemplates: true,
     calYear: new Date().getFullYear(),
     calMonth: new Date().getMonth(),
+    calSelectedDate: fmtDate(new Date()),
     finance: { transactions: [] },
     financeView: 'summary',
     finVizYear: new Date().getFullYear(),
@@ -805,7 +814,7 @@
             const tasksDue = state.tasks.tasks.filter(t=>t.dueDate===dateStr).length;
             const hasJournal = !!state.journal.entries[dateStr];
             return `
-              <div class="lo-cal-cell ${dateStr===today?'today':''}" data-cal-day="${dateStr}">
+              <div class="lo-cal-cell ${dateStr===today?'today':''} ${dateStr===state.calSelectedDate?'selected':''}" data-cal-day="${dateStr}">
                 <div class="lo-cal-daynum">${dayNum}</div>
                 <div class="lo-cal-dots">
                   ${habitDotClass ? `<div class="lo-cal-dot ${habitDotClass}"></div>` : ''}
@@ -820,6 +829,55 @@
           <div class="lo-cal-legend-item"><div class="lo-cal-dot habit-full"></div> Ieradumi izpildīti</div>
           <div class="lo-cal-legend-item"><div class="lo-cal-dot task"></div> Uzdevuma termiņš</div>
           <div class="lo-cal-legend-item"><div class="lo-cal-dot journal"></div> Dienasgrāmatas ieraksts</div>
+        </div>
+        ${renderCalendarDayDetail()}
+      </div>
+    `;
+  }
+
+  function renderCalendarDayDetail(){
+    const date = state.calSelectedDate;
+    if(!date) return '';
+    const dayTasks = state.tasks.tasks.filter(t=>t.dueDate===date).sort((a,b)=>(a.dueTime||'').localeCompare(b.dueTime||''));
+    const dayHabitsDone = state.habits.habits.filter(h => state.habits.logs[date] && state.habits.logs[date][h.id]);
+    const journalText = state.journal.entries[date];
+    const dateLabel = new Date(date+'T00:00:00').toLocaleDateString('lv-LV', { weekday: 'long', day: 'numeric', month: 'long' });
+
+    return `
+      <div class="lo-cal-detail">
+        <div class="lo-cal-detail-header">
+          <div class="lo-cal-detail-date">${dateLabel}</div>
+          <button class="lo-btn ghost" id="cal-detail-close">Aizvērt</button>
+        </div>
+
+        <div class="lo-cal-detail-section">
+          <div class="lo-cal-detail-label">${icon('tasks')} Uzdevumi (${dayTasks.length})</div>
+          ${dayTasks.length ? dayTasks.map(t=>`
+            <div class="lo-task-item">
+              <div class="lo-task-check ${t.done?'done':''}" data-toggle-task="${t.id}">${t.done ? '✓' : ''}</div>
+              <div class="lo-task-text ${t.done?'done':''}">${escapeHtml(t.text)}</div>
+              <div class="lo-task-tags">
+                ${t.dueTime ? `<span class="lo-tag">${t.dueTime}</span>` : ''}
+                <span class="lo-tag prio-${t.priority}">${t.priority}</span>
+              </div>
+            </div>
+          `).join('') : `<div class="lo-empty" style="padding:8px 0;">Šai dienai nav uzdevumu.</div>`}
+        </div>
+
+        <div class="lo-cal-detail-section">
+          <div class="lo-cal-detail-label">${icon('habits')} Izpildītie ieradumi (${dayHabitsDone.length}/${state.habits.habits.length})</div>
+          ${dayHabitsDone.length ? dayHabitsDone.map(h=>`
+            <div class="lo-proc-row">
+              <div class="lo-proc-dot on"></div>
+              <div class="lo-proc-name">${escapeHtml(h.name)}</div>
+            </div>
+          `).join('') : `<div class="lo-empty" style="padding:8px 0;">Šai dienai nav izpildītu ieradumu.</div>`}
+        </div>
+
+        <div class="lo-cal-detail-section">
+          <div class="lo-cal-detail-label">${icon('journal')} Dienasgrāmata</div>
+          ${journalText ? `<div class="lo-journal-preview-box">${escapeHtml(journalText)}</div>` : `<div class="lo-empty" style="padding:8px 0;">Šai dienai nav ieraksta.</div>`}
+          <button class="lo-btn ghost" data-open-journal-from-cal="${date}">Atvērt dienasgrāmatu</button>
         </div>
       </div>
     `;
@@ -974,7 +1032,14 @@
     const last7 = last7Days();
     const workoutsThisWeek = last7.reduce((sum, d)=> sum + ((state.health.entries[d] && state.health.entries[d].workouts) ? state.health.entries[d].workouts.length : 0), 0);
 
-    const topTasks = activeTasks.slice(0,4);
+    const topTasks = [...activeTasks].sort((a,b)=>{
+      if(!a.dueDate && !b.dueDate) return 0;
+      if(!a.dueDate) return 1;
+      if(!b.dueDate) return -1;
+      const aKey = a.dueDate + ' ' + (a.dueTime || '00:00');
+      const bKey = b.dueDate + ' ' + (b.dueTime || '00:00');
+      return aKey.localeCompare(bKey);
+    }).slice(0,4);
 
     return `
       <div class="lo-module-title">Pārskats</div>
@@ -1012,6 +1077,21 @@
       </div>
 
       <div class="lo-panel">
+        <div class="lo-panel-title">${icon('tasks')} Tuvākie uzdevumi</div>
+        ${topTasks.length ? topTasks.map(t=>`
+          <div class="lo-task-item" style="border-bottom:1px solid var(--border);">
+            <div class="lo-task-check" data-toggle-task="${t.id}"></div>
+            <div class="lo-task-text">${escapeHtml(t.text)}</div>
+            <div class="lo-task-tags">
+              ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${t.dueDate}${t.dueTime ? ' '+t.dueTime : ''}</span>` : ''}
+              ${t.priority ? `<span class="lo-tag prio-${t.priority}">${t.priority}</span>` : ''}
+              ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
+            </div>
+          </div>
+        `).join('') : `<div class="lo-empty">Nav aktīvu uzdevumu. Baudi mieru — vai pievieno jaunu "Uzdevumos".</div>`}
+      </div>
+
+      <div class="lo-panel">
         <div class="lo-panel-title">${icon('habits')} Aktīvie procesi (ieradumi)</div>
         ${habits.length ? habits.map(h=>{
           const on = !!(state.habits.logs[today] && state.habits.logs[today][h.id]);
@@ -1027,20 +1107,6 @@
       ${renderCalendar()}
 
       ${renderFinancePanel()}
-
-      <div class="lo-panel">
-        <div class="lo-panel-title">${icon('tasks')} Tuvākie uzdevumi</div>
-        ${topTasks.length ? topTasks.map(t=>`
-          <div class="lo-task-item" style="border-bottom:1px solid var(--border);">
-            <div class="lo-task-check" data-toggle-task="${t.id}"></div>
-            <div class="lo-task-text">${escapeHtml(t.text)}</div>
-            <div class="lo-task-tags">
-              ${t.priority ? `<span class="lo-tag prio-${t.priority}">${t.priority}</span>` : ''}
-              ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
-            </div>
-          </div>
-        `).join('') : `<div class="lo-empty">Nav aktīvu uzdevumu. Baudi mieru — vai pievieno jaunu "Uzdevumos".</div>`}
-      </div>
     `;
   }
 
@@ -1119,6 +1185,7 @@
           <input class="lo-input" id="new-task-text" placeholder="Jauns uzdevums..." />
           <input class="lo-input" id="new-task-project" placeholder="Projekts (nav obligāti)" style="flex:1;min-width:120px;" />
           <input type="date" class="lo-input" id="new-task-due" style="flex:1;min-width:130px;" />
+          <input type="time" class="lo-input" id="new-task-due-time" style="flex:0 0 110px;" />
           <select class="lo-select" id="new-task-priority">
             <option value="Zema">Zema</option>
             <option value="Vidēja" selected>Vidēja</option>
@@ -1140,7 +1207,7 @@
             <div class="lo-task-tags">
               <span class="lo-tag prio-${t.priority}">${t.priority}</span>
               ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
-              ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${t.dueDate}</span>` : ''}
+              ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${t.dueDate}${t.dueTime ? ' '+t.dueTime : ''}</span>` : ''}
               <button class="lo-btn danger-ghost" data-del-task="${t.id}">✕</button>
             </div>
           </div>
@@ -1638,11 +1705,23 @@
     }
     root.querySelectorAll('[data-cal-day]').forEach(el=>{
       el.addEventListener('click', ()=>{
-        state.journalDate = el.getAttribute('data-cal-day');
-        state.module = 'journal';
+        const clicked = el.getAttribute('data-cal-day');
+        state.calSelectedDate = state.calSelectedDate === clicked ? null : clicked;
         render();
       });
     });
+    const calDetailClose = root.querySelector('#cal-detail-close');
+    if(calDetailClose){
+      calDetailClose.addEventListener('click', ()=>{ state.calSelectedDate = null; render(); });
+    }
+    const openJournalFromCal = root.querySelector('[data-open-journal-from-cal]');
+    if(openJournalFromCal){
+      openJournalFromCal.addEventListener('click', ()=>{
+        state.journalDate = openJournalFromCal.getAttribute('data-open-journal-from-cal');
+        state.module = 'journal';
+        render();
+      });
+    }
 
     // Habits
     const templatesToggle = root.querySelector('#templates-toggle');
@@ -1696,10 +1775,11 @@
         const textInput = root.querySelector('#new-task-text');
         const projectInput = root.querySelector('#new-task-project');
         const dueInput = root.querySelector('#new-task-due');
+        const dueTimeInput = root.querySelector('#new-task-due-time');
         const prioSelect = root.querySelector('#new-task-priority');
         const text = textInput.value.trim();
         if(!text) return;
-        state.tasks.tasks.unshift({ id: uid(), text, project: projectInput.value.trim(), dueDate: dueInput.value || null, priority: prioSelect.value, done: false });
+        state.tasks.tasks.unshift({ id: uid(), text, project: projectInput.value.trim(), dueDate: dueInput.value || null, dueTime: dueTimeInput.value || null, priority: prioSelect.value, done: false });
         await safeSet('tasks-data', state.tasks);
         render();
       });
