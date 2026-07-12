@@ -54,6 +54,17 @@
 }
 .lo-banner-empty:hover { color: var(--accent); border-color: var(--accent); }
 .lo-banner-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+.lo-banner-position-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(10,13,18,0.85);
+  backdrop-filter: blur(4px);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lo-banner-position-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+.lo-banner-position-overlay input[type=range] { flex: 1; accent-color: var(--accent); }
 .lo-banner-btn {
   background: rgba(10,13,18,0.75);
   backdrop-filter: blur(4px);
@@ -369,6 +380,13 @@
   padding: 11px 4px;
   border-bottom: 1px solid var(--border);
 }
+.lo-task-edit-row {
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
+  border-radius: 8px;
+  margin: 4px 0;
+}
 .lo-task-check {
   width: 18px; height: 18px;
   border-radius: 5px;
@@ -478,23 +496,37 @@
 .lo-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
 .lo-cal-daylabel { text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); padding-bottom: 4px; letter-spacing: 0.5px; }
 .lo-cal-cell {
-  min-height: 58px;
+  min-height: 74px;
   border: 1px solid var(--border);
   background: var(--bg-raised);
   border-radius: 7px;
   padding: 6px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 3px;
   cursor: pointer;
   transition: border-color .12s;
+  overflow: hidden;
 }
 .lo-cal-cell:hover { border-color: var(--text-dim); }
 .lo-cal-cell.today { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(79,209,197,0.25); }
 .lo-cal-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+.lo-cal-cell-top { display: flex; align-items: flex-start; justify-content: space-between; }
 .lo-cal-daynum { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); }
 .lo-cal-cell.today .lo-cal-daynum { color: var(--accent); font-weight: 700; }
 .lo-cal-dots { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+.lo-cal-task-preview {
+  font-size: 9.5px;
+  color: var(--warn);
+  background: var(--warn-dim);
+  border-radius: 4px;
+  padding: 2px 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+.lo-cal-task-more { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; color: var(--text-dim); }
 .lo-cal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
 .lo-cal-dot.habit-full { background: var(--accent); }
 .lo-cal-dot.habit-partial { background: var(--accent); opacity: 0.4; }
@@ -565,7 +597,7 @@
   .lo-uptime-badge { font-size: 10px; padding: 3px 8px; }
   .lo-auth-card { width: auto; max-width: 320px; margin: 0 16px; padding: 24px 18px; }
   .lo-grid { grid-template-columns: repeat(2, 1fr); }
-  .lo-cal-cell { min-height: 42px; padding: 4px; }
+  .lo-cal-cell { min-height: 56px; padding: 4px; }
   .lo-cal-daynum { font-size: 10px; }
   .lo-row-form { flex-direction: column; }
   .lo-row-form .lo-input, .lo-row-form .lo-select { flex: 1 1 auto; width: 100%; }
@@ -629,14 +661,16 @@
     calYear: new Date().getFullYear(),
     calMonth: new Date().getMonth(),
     calSelectedDate: fmtDate(new Date()),
+    editingTaskId: null,
     finance: { transactions: [] },
     financeView: 'summary',
     finVizYear: new Date().getFullYear(),
     finVizMonth: new Date().getMonth(),
     health: { entries: {} },
     healthDate: fmtDate(new Date()),
-    banner: { src: null },
+    banner: { src: null, posY: 50 },
     bannerEditing: false,
+    bannerPositioning: false,
     youtube: { type: null, id: null },
     youtubeEditing: false,
   };
@@ -731,7 +765,8 @@
     state.learning = await safeGet('learning-data', { tracks: [] });
     state.finance = await safeGet('finance-data', { transactions: [] });
     state.health = await safeGet('health-data', { entries: {} });
-    state.banner = await safeGet('banner-data', { src: null });
+    state.banner = await safeGet('banner-data', { src: null, posY: 50 });
+    if(state.banner.posY === undefined) state.banner.posY = 50;
     state.youtube = await safeGet('youtube-data', { type: null, id: null });
     state.loaded = true;
     render();
@@ -811,23 +846,28 @@
             const dayNum = parseInt(dateStr.slice(8,10),10);
             const doneCount = totalHabits ? state.habits.habits.filter(h => state.habits.logs[dateStr] && state.habits.logs[dateStr][h.id]).length : 0;
             const habitDotClass = totalHabits===0 ? '' : (doneCount===totalHabits ? 'habit-full' : (doneCount>0 ? 'habit-partial' : ''));
-            const tasksDue = state.tasks.tasks.filter(t=>t.dueDate===dateStr).length;
+            const dayTasks = state.tasks.tasks.filter(t=>t.dueDate===dateStr);
             const hasJournal = !!state.journal.entries[dateStr];
             return `
               <div class="lo-cal-cell ${dateStr===today?'today':''} ${dateStr===state.calSelectedDate?'selected':''}" data-cal-day="${dateStr}">
-                <div class="lo-cal-daynum">${dayNum}</div>
-                <div class="lo-cal-dots">
-                  ${habitDotClass ? `<div class="lo-cal-dot ${habitDotClass}"></div>` : ''}
-                  ${tasksDue ? `<div class="lo-cal-dot task"></div>` : ''}
-                  ${hasJournal ? `<div class="lo-cal-dot journal"></div>` : ''}
+                <div class="lo-cal-cell-top">
+                  <div class="lo-cal-daynum">${dayNum}</div>
+                  <div class="lo-cal-dots">
+                    ${habitDotClass ? `<div class="lo-cal-dot ${habitDotClass}"></div>` : ''}
+                    ${hasJournal ? `<div class="lo-cal-dot journal"></div>` : ''}
+                  </div>
                 </div>
+                ${dayTasks.length ? `
+                  <div class="lo-cal-task-preview">${escapeHtml(truncateText(dayTasks[0].text, 14))}</div>
+                  ${dayTasks.length>1 ? `<div class="lo-cal-task-more">+${dayTasks.length-1} vēl</div>` : ''}
+                ` : ''}
               </div>
             `;
           }).join('')}
         </div>
         <div class="lo-cal-legend">
           <div class="lo-cal-legend-item"><div class="lo-cal-dot habit-full"></div> Ieradumi izpildīti</div>
-          <div class="lo-cal-legend-item"><div class="lo-cal-dot task"></div> Uzdevuma termiņš</div>
+          <div class="lo-cal-legend-item"><div class="lo-cal-task-preview" style="padding:1px 5px;">uzdevums</div> Uzdevuma termiņš</div>
           <div class="lo-cal-legend-item"><div class="lo-cal-dot journal"></div> Dienasgrāmatas ieraksts</div>
         </div>
         ${renderCalendarDayDetail()}
@@ -981,10 +1021,23 @@
       `;
     }
     if(state.banner.src){
+      if(state.bannerPositioning){
+        return `
+          <div class="lo-banner">
+            <img id="banner-img" src="${state.banner.src}" alt="banner" style="object-position: center ${state.banner.posY}%;" />
+            <div class="lo-banner-position-overlay">
+              <span class="lo-banner-position-label">Velc, lai pozicionētu attēlu</span>
+              <input type="range" min="0" max="100" value="${state.banner.posY}" id="banner-position-slider" />
+              <button class="lo-btn" id="banner-position-done">Gatavs</button>
+            </div>
+          </div>
+        `;
+      }
       return `
         <div class="lo-banner">
-          <img src="${state.banner.src}" alt="banner" />
+          <img src="${state.banner.src}" alt="banner" style="object-position: center ${state.banner.posY}%;" />
           <div class="lo-banner-controls">
+            <button class="lo-banner-btn" id="banner-position-btn">Pozicionēt</button>
             <button class="lo-banner-btn" id="banner-edit-btn">Mainīt</button>
             <button class="lo-banner-btn" id="banner-remove-btn">Noņemt</button>
           </div>
@@ -1200,7 +1253,29 @@
           <div class="lo-tab ${state.taskFilter==='done'?'active':''}" data-filter="done">Pabeigti (${state.tasks.tasks.filter(t=>t.done).length})</div>
         </div>
 
-        ${list.length ? list.map(t=>`
+        ${list.length ? list.map(t=>{
+          if(state.editingTaskId === t.id){
+            return `
+              <div class="lo-task-edit-row">
+                <div class="lo-row-form" style="margin-bottom:8px;">
+                  <input class="lo-input" data-edit-text="${t.id}" value="${escapeHtml(t.text)}" placeholder="Uzdevums..." />
+                  <input class="lo-input" data-edit-project="${t.id}" value="${escapeHtml(t.project||'')}" placeholder="Projekts" style="flex:1;min-width:110px;" />
+                </div>
+                <div class="lo-row-form">
+                  <input type="date" class="lo-input" data-edit-due="${t.id}" value="${t.dueDate||''}" style="flex:1;min-width:120px;" />
+                  <input type="time" class="lo-input" data-edit-due-time="${t.id}" value="${t.dueTime||''}" style="flex:0 0 100px;" />
+                  <select class="lo-select" data-edit-priority="${t.id}" style="flex:0 0 110px;">
+                    <option value="Zema" ${t.priority==='Zema'?'selected':''}>Zema</option>
+                    <option value="Vidēja" ${t.priority==='Vidēja'?'selected':''}>Vidēja</option>
+                    <option value="Augsta" ${t.priority==='Augsta'?'selected':''}>Augsta</option>
+                  </select>
+                  <button class="lo-btn" data-save-edit-task="${t.id}">Saglabāt</button>
+                  <button class="lo-btn ghost" data-cancel-edit-task="${t.id}">Atcelt</button>
+                </div>
+              </div>
+            `;
+          }
+          return `
           <div class="lo-task-item">
             <div class="lo-task-check ${t.done?'done':''}" data-toggle-task="${t.id}">${t.done ? '✓' : ''}</div>
             <div class="lo-task-text ${t.done?'done':''}">${escapeHtml(t.text)}</div>
@@ -1208,10 +1283,12 @@
               <span class="lo-tag prio-${t.priority}">${t.priority}</span>
               ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
               ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${t.dueDate}${t.dueTime ? ' '+t.dueTime : ''}</span>` : ''}
+              <button class="lo-btn ghost" data-edit-task="${t.id}" style="padding:5px 9px;font-size:11px;">✎</button>
               <button class="lo-btn danger-ghost" data-del-task="${t.id}">✕</button>
             </div>
           </div>
-        `).join('') : `<div class="lo-empty">Nekā šeit. Tīrs saraksts.</div>`}
+          `;
+        }).join('') : `<div class="lo-empty">Nekā šeit. Tīrs saraksts.</div>`}
       </div>
     `;
   }
@@ -1588,6 +1665,10 @@
     `;
   }
 
+  function truncateText(str, len){
+    if(!str) return '';
+    return str.length > len ? str.slice(0, len).trim() + '…' : str;
+  }
   function escapeHtml(str){
     const d = document.createElement('div');
     d.textContent = str;
@@ -1610,10 +1691,31 @@
     if(bannerEditBtn){
       bannerEditBtn.addEventListener('click', ()=>{ state.bannerEditing = true; render(); });
     }
+    const bannerPositionBtn = root.querySelector('#banner-position-btn');
+    if(bannerPositionBtn){
+      bannerPositionBtn.addEventListener('click', ()=>{ state.bannerPositioning = true; render(); });
+    }
+    const bannerPositionSlider = root.querySelector('#banner-position-slider');
+    const bannerImg = root.querySelector('#banner-img');
+    if(bannerPositionSlider && bannerImg){
+      bannerPositionSlider.addEventListener('input', ()=>{
+        bannerImg.style.objectPosition = `center ${bannerPositionSlider.value}%`;
+      });
+    }
+    const bannerPositionDone = root.querySelector('#banner-position-done');
+    if(bannerPositionDone){
+      bannerPositionDone.addEventListener('click', async ()=>{
+        const val = bannerPositionSlider ? parseInt(bannerPositionSlider.value, 10) : state.banner.posY;
+        state.banner.posY = val;
+        state.bannerPositioning = false;
+        await safeSet('banner-data', state.banner);
+        render();
+      });
+    }
     const bannerRemoveBtn = root.querySelector('#banner-remove-btn');
     if(bannerRemoveBtn){
       bannerRemoveBtn.addEventListener('click', async ()=>{
-        state.banner = { src: null };
+        state.banner = { src: null, posY: 50 };
         await safeSet('banner-data', state.banner);
         render();
       });
@@ -1635,7 +1737,7 @@
         }
         const reader = new FileReader();
         reader.onload = async ()=>{
-          state.banner = { src: reader.result };
+          state.banner = { src: reader.result, posY: 50 };
           await safeSet('banner-data', state.banner);
           state.bannerEditing = false;
           render();
@@ -1649,7 +1751,7 @@
         const urlInput = root.querySelector('#banner-url-input');
         const url = urlInput.value.trim();
         if(!url) return;
-        state.banner = { src: url };
+        state.banner = { src: url, posY: 50 };
         await safeSet('banner-data', state.banner);
         state.bannerEditing = false;
         render();
@@ -1795,6 +1897,40 @@
       el.addEventListener('click', async ()=>{
         const id = el.getAttribute('data-del-task');
         state.tasks.tasks = state.tasks.tasks.filter(t=>t.id!==id);
+        await safeSet('tasks-data', state.tasks);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-edit-task]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        state.editingTaskId = el.getAttribute('data-edit-task');
+        render();
+      });
+    });
+    root.querySelectorAll('[data-cancel-edit-task]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        state.editingTaskId = null;
+        render();
+      });
+    });
+    root.querySelectorAll('[data-save-edit-task]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-save-edit-task');
+        const t = state.tasks.tasks.find(t=>t.id===id);
+        if(!t) return;
+        const textInput = root.querySelector(`[data-edit-text="${id}"]`);
+        const projectInput = root.querySelector(`[data-edit-project="${id}"]`);
+        const dueInput = root.querySelector(`[data-edit-due="${id}"]`);
+        const dueTimeInput = root.querySelector(`[data-edit-due-time="${id}"]`);
+        const prioritySelect = root.querySelector(`[data-edit-priority="${id}"]`);
+        const newText = textInput.value.trim();
+        if(!newText) return;
+        t.text = newText;
+        t.project = projectInput.value.trim();
+        t.dueDate = dueInput.value || null;
+        t.dueTime = dueTimeInput.value || null;
+        t.priority = prioritySelect.value;
+        state.editingTaskId = null;
         await safeSet('tasks-data', state.tasks);
         render();
       });
