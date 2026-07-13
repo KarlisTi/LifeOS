@@ -2248,17 +2248,57 @@
     if(pwInput) pwInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSubmit(); });
   }
 
+  function renderRecoveryScreen(){
+    root.innerHTML = `
+      <div class="lo-auth-wrap">
+        <div class="lo-auth-card">
+          <div class="lo-logo" style="margin-bottom:2px;">LIFE<span>OS</span></div>
+          <div class="lo-tagline" style="margin-bottom:20px;">Iestati jaunu paroli</div>
+          <input class="lo-input" type="password" id="recovery-password" placeholder="Jaunā parole" style="margin-bottom:10px;" />
+          <input class="lo-input" type="password" id="recovery-password-confirm" placeholder="Apstiprini paroli" style="margin-bottom:14px;" />
+          ${state.authError ? `<div class="lo-auth-error">${escapeHtml(state.authError)}</div>` : ''}
+          <button class="lo-btn" id="recovery-submit-btn" style="width:100%;" ${state.authBusy?'disabled':''}>${state.authBusy ? 'Lūdzu uzgaidi...' : 'Saglabāt jauno paroli'}</button>
+        </div>
+      </div>
+    `;
+    const submitBtn = root.querySelector('#recovery-submit-btn');
+    submitBtn.addEventListener('click', async ()=>{
+      const pw1 = root.querySelector('#recovery-password').value;
+      const pw2 = root.querySelector('#recovery-password-confirm').value;
+      if(!pw1 || pw1.length < 6){ state.authError = 'Parolei jābūt vismaz 6 rakstzīmes garai.'; renderRecoveryScreen(); return; }
+      if(pw1 !== pw2){ state.authError = 'Paroles nesakrīt.'; renderRecoveryScreen(); return; }
+      state.authBusy = true; state.authError = '';
+      renderRecoveryScreen();
+      const { error } = await sb.auth.updateUser({ password: pw1 });
+      state.authBusy = false;
+      if(error){
+        state.authError = error.message;
+        renderRecoveryScreen();
+        return;
+      }
+      state.authError = '';
+      state.isRecoveryLink = false;
+      history.replaceState(null, '', window.location.pathname);
+      await loadAll();
+    });
+  }
+
   async function initAuth(){
+    state.isRecoveryLink = window.location.hash.includes('type=recovery');
     const { data } = await sb.auth.getSession();
     state.session = data.session;
-    if(state.session){
+    if(state.session && state.isRecoveryLink){
+      renderRecoveryScreen();
+    } else if(state.session){
       await loadAll();
     } else {
       renderAuthScreen();
     }
     sb.auth.onAuthStateChange((event, session)=>{
       state.session = session;
-      if(session && !state.loaded){
+      if(event === 'PASSWORD_RECOVERY' || (session && state.isRecoveryLink && !state.loaded)){
+        renderRecoveryScreen();
+      } else if(session && !state.loaded){
         loadAll();
       } else if(!session){
         state.loaded = false;
