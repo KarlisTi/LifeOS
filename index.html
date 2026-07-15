@@ -225,6 +225,109 @@
 .lo-time-picker-actions { display: flex; gap: 6px; margin-top: 10px; }
 .lo-time-picker-actions .lo-btn { flex: 1; font-size: 11px; padding: 7px; }
 
+/* ---- Global Search ---- */
+.lo-search-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(6,8,11,0.7);
+  backdrop-filter: blur(2px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 12vh;
+}
+.lo-search-modal {
+  width: 560px; max-width: 92vw;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  overflow: hidden;
+}
+.lo-search-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 16px;
+  padding: 16px 18px;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+}
+.lo-search-results { max-height: 50vh; overflow-y: auto; padding: 8px; }
+.lo-search-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.lo-search-result:hover { background: var(--bg-raised); }
+.lo-search-type { font-size: 15px; flex-shrink: 0; }
+.lo-search-label { font-size: 13.5px; color: var(--text); }
+.lo-search-sub { font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+.lo-search-empty { padding: 24px; text-align: center; color: var(--text-dim); font-size: 13px; }
+.lo-search-hint { padding: 10px 18px; border-top: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); }
+
+/* ---- Quick Add FAB ---- */
+.lo-quick-add-fab {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #06231F;
+  border: none;
+  font-size: 26px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(79,209,197,0.35);
+  z-index: 500;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+.lo-quick-add-fab:hover { transform: scale(1.06); }
+.lo-quickadd-panel {
+  position: fixed;
+  bottom: 88px; right: 24px;
+  width: 300px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.55);
+  padding: 12px;
+  z-index: 501;
+}
+.lo-quickadd-tabs { display: flex; gap: 5px; margin-bottom: 10px; }
+.lo-quickadd-tab {
+  flex: 1;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  padding: 6px 4px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+.lo-quickadd-tab.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(79,209,197,0.3); }
+.lo-quickadd-habit-list { max-height: 200px; overflow-y: auto; }
+.lo-quickadd-habit-item {
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.lo-quickadd-habit-item:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---- Drag & Drop ---- */
+.lo-drag-handle { cursor: grab; color: var(--text-dim); font-size: 13px; flex-shrink: 0; padding: 0 2px; user-select: none; }
+.lo-drag-handle:active { cursor: grabbing; }
+[draggable="true"].lo-drag-over { border-top: 2px solid var(--accent); }
+
 /* ---- Auth ---- */
 .lo-auth-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .lo-auth-card { width: 300px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px; text-align: center; }
@@ -860,6 +963,8 @@
     authBusy: false,
     module: 'dashboard',
     taskFilter: 'all',
+    taskSort: 'manual',
+    taskProjectFilter: 'all',
     journalDate: fmtDate(new Date()),
     loaded: false,
     meta: { startDate: fmtDate(new Date()) },
@@ -1176,6 +1281,8 @@
 
   function render(){
     closeTimePicker();
+    closeSearch();
+    closeQuickAdd();
     if(!state.loaded){
       root.innerHTML = `<div style="padding:40px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:13px;">Ielādē sistēmu...</div>`;
       return;
@@ -1223,6 +1330,7 @@
           <div class="lo-content">${renderModule()}</div>
         </div>
       </div>
+      <button class="lo-quick-add-fab" id="quick-add-fab" title="Ātri pievienot (vai Cmd/Ctrl+K meklēšanai)">+</button>
     `;
 
     attachEvents();
@@ -1478,10 +1586,11 @@
           <button class="lo-btn" id="add-habit-btn">+ Pievienot</button>
         </div>
 
-        ${habits.length ? habits.map(h=>{
+        ${habits.length ? habits.map((h, idx)=>{
           const streak = currentStreak(h.id);
           return `
-          <div class="lo-habit-item">
+          <div class="lo-habit-item" draggable="true" data-drag-habit="${idx}">
+            <div class="lo-drag-handle">⠿</div>
             <div class="lo-habit-name">
               <div class="lo-habit-title">${escapeHtml(h.name)}</div>
               <div class="lo-habit-area">${h.area} · ${recurrenceLabel(h)}${h.reminderTime ? ' · 🔔 ' + h.reminderTime : ''}</div>
@@ -1503,9 +1612,30 @@
 
   // ---------------- TASKS ----------------
   function renderTasks(){
-    let list = state.tasks.tasks;
+    let list = state.tasks.tasks.map((t, idx)=>({ ...t, _origIndex: idx }));
     if(state.taskFilter==='active') list = list.filter(t=>!t.done);
     if(state.taskFilter==='done') list = list.filter(t=>t.done);
+
+    const projects = Array.from(new Set(state.tasks.tasks.map(t=>t.project).filter(Boolean))).sort();
+    if(state.taskProjectFilter !== 'all') list = list.filter(t=>t.project === state.taskProjectFilter);
+
+    const canDrag = state.taskSort === 'manual' && state.taskFilter === 'all' && state.taskProjectFilter === 'all';
+
+    if(state.taskSort === 'priority'){
+      const order = { 'Augsta': 0, 'Vidēja': 1, 'Zema': 2 };
+      list = [...list].sort((a,b)=> order[a.priority] - order[b.priority]);
+    } else if(state.taskSort === 'due'){
+      list = [...list].sort((a,b)=>{
+        if(!a.dueDate && !b.dueDate) return 0;
+        if(!a.dueDate) return 1;
+        if(!b.dueDate) return -1;
+        const aKey = a.dueDate + ' ' + (a.dueTime || '00:00');
+        const bKey = b.dueDate + ' ' + (b.dueTime || '00:00');
+        return aKey.localeCompare(bKey);
+      });
+    } else if(state.taskSort === 'alpha'){
+      list = [...list].sort((a,b)=> a.text.localeCompare(b.text, 'lv'));
+    }
 
     return `
       <div class="lo-module-title">Uzdevumi</div>
@@ -1534,6 +1664,22 @@
           <div class="lo-tab ${state.taskFilter==='done'?'active':''}" data-filter="done">Pabeigti (${state.tasks.tasks.filter(t=>t.done).length})</div>
         </div>
 
+        <div class="lo-row-form" style="margin-top:-6px;">
+          <select class="lo-select" id="task-sort-select" style="flex:0 0 170px;">
+            <option value="manual" ${state.taskSort==='manual'?'selected':''}>Kārtot: manuāli (velc)</option>
+            <option value="priority" ${state.taskSort==='priority'?'selected':''}>Kārtot: prioritāte</option>
+            <option value="due" ${state.taskSort==='due'?'selected':''}>Kārtot: termiņš</option>
+            <option value="alpha" ${state.taskSort==='alpha'?'selected':''}>Kārtot: alfabētiski</option>
+          </select>
+          ${projects.length ? `
+            <select class="lo-select" id="task-project-filter" style="flex:0 0 170px;">
+              <option value="all" ${state.taskProjectFilter==='all'?'selected':''}>Visi projekti</option>
+              ${projects.map(p=>`<option value="${escapeHtml(p)}" ${state.taskProjectFilter===p?'selected':''}>${escapeHtml(p)}</option>`).join('')}
+            </select>
+          ` : ''}
+          ${!canDrag ? `<div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-dim);display:flex;align-items:center;">Pārkārtošana ar vilkšanu pieejama tikai "Visi" + "manuāli" skatā</div>` : ''}
+        </div>
+
         ${list.length ? list.map(t=>{
           if(state.editingTaskId === t.id){
             return `
@@ -1560,7 +1706,8 @@
             `;
           }
           return `
-          <div class="lo-task-item">
+          <div class="lo-task-item" ${canDrag ? `draggable="true" data-drag-task="${t._origIndex}"` : ''}>
+            ${canDrag ? `<div class="lo-drag-handle">⠿</div>` : ''}
             <div class="lo-task-check ${t.done?'done':''}" data-toggle-task="${t.id}">${t.done ? '✓' : ''}</div>
             <div class="lo-task-text ${t.done?'done':''}">${escapeHtml(t.text)}</div>
             <div class="lo-task-tags">
@@ -2026,6 +2173,190 @@
     if(!str) return '';
     return str.length > len ? str.slice(0, len).trim() + '…' : str;
   }
+  function searchTypeIcon(type){
+    const map = { task: '☑', habit: '🔁', goal: '🎯', learning: '📘', journal: '📓' };
+    return map[type] || '•';
+  }
+
+  function buildSearchIndex(){
+    const items = [];
+    state.tasks.tasks.forEach(t=>{
+      items.push({ type: 'task', label: t.text, sub: t.project || t.priority, action: ()=>{ state.module = 'tasks'; render(); } });
+    });
+    state.habits.habits.forEach(h=>{
+      items.push({ type: 'habit', label: h.name, sub: h.area, action: ()=>{ state.module = 'habits'; render(); } });
+    });
+    state.goals.goals.forEach(g=>{
+      items.push({ type: 'goal', label: g.text, sub: g.area, action: ()=>{ state.module = 'goals'; render(); } });
+    });
+    state.learning.tracks.forEach(tr=>{
+      items.push({ type: 'learning', label: tr.name, sub: 'Prasme', action: ()=>{ state.module = 'learning'; render(); } });
+      tr.topics.forEach(top=>{
+        items.push({ type: 'learning', label: top.text, sub: tr.name, action: ()=>{ state.module = 'learning'; render(); } });
+      });
+    });
+    Object.entries(state.journal.entries).forEach(([d, text])=>{
+      if(!text) return;
+      items.push({ type: 'journal', label: text.slice(0, 70), sub: d, action: ()=>{ state.journalDate = d; state.module = 'journal'; render(); } });
+    });
+    return items;
+  }
+
+  function closeSearch(){
+    const existing = document.getElementById('lo-active-search');
+    if(existing) existing.remove();
+  }
+
+  function openSearch(){
+    closeSearch();
+    closeTimePicker();
+    closeQuickAdd();
+    const overlay = document.createElement('div');
+    overlay.className = 'lo-search-overlay';
+    overlay.id = 'lo-active-search';
+    overlay.innerHTML = `
+      <div class="lo-search-modal">
+        <input type="text" class="lo-search-input" id="lo-search-input" placeholder="Meklēt uzdevumus, ieradumus, mērķus, dienasgrāmatu, mācības..." />
+        <div class="lo-search-results" id="lo-search-results"></div>
+        <div class="lo-search-hint">ESC lai aizvērtu · Cmd/Ctrl+K lai atvērtu jebkurā brīdī</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#lo-search-input');
+    const resultsEl = overlay.querySelector('#lo-search-results');
+    input.focus();
+
+    let currentFiltered = [];
+    function renderResults(query){
+      const items = buildSearchIndex();
+      const q = query.trim().toLowerCase();
+      currentFiltered = q
+        ? items.filter(it=> it.label.toLowerCase().includes(q) || (it.sub||'').toLowerCase().includes(q))
+        : items.slice(0, 12);
+      currentFiltered = currentFiltered.slice(0, 25);
+      resultsEl.innerHTML = currentFiltered.length ? currentFiltered.map((it,i)=>`
+        <div class="lo-search-result" data-search-idx="${i}">
+          <span class="lo-search-type">${searchTypeIcon(it.type)}</span>
+          <div>
+            <div class="lo-search-label">${escapeHtml(it.label)}</div>
+            ${it.sub ? `<div class="lo-search-sub">${escapeHtml(it.sub)}</div>` : ''}
+          </div>
+        </div>
+      `).join('') : `<div class="lo-search-empty">Nekas nav atrasts.</div>`;
+      resultsEl.querySelectorAll('[data-search-idx]').forEach(el=>{
+        el.addEventListener('click', ()=>{
+          const idx = parseInt(el.getAttribute('data-search-idx'), 10);
+          currentFiltered[idx].action();
+          closeSearch();
+        });
+      });
+    }
+    renderResults('');
+    input.addEventListener('input', ()=> renderResults(input.value));
+    input.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeSearch(); });
+    overlay.addEventListener('mousedown', (e)=>{ if(e.target === overlay) closeSearch(); });
+  }
+
+  function closeQuickAdd(){
+    const existing = document.getElementById('lo-active-quickadd');
+    if(existing) existing.remove();
+  }
+
+  function openQuickAdd(triggerEl){
+    closeQuickAdd();
+    closeTimePicker();
+    closeSearch();
+    const panel = document.createElement('div');
+    panel.className = 'lo-quickadd-panel';
+    panel.id = 'lo-active-quickadd';
+    panel.innerHTML = `
+      <div class="lo-quickadd-tabs">
+        <div class="lo-quickadd-tab active" data-qa-type="task">Uzdevums</div>
+        <div class="lo-quickadd-tab" data-qa-type="journal">Piezīme</div>
+        <div class="lo-quickadd-tab" data-qa-type="habit">Ieradums</div>
+      </div>
+      <input type="text" class="lo-input" id="lo-quickadd-input" placeholder="Uzraksti uzdevumu..." />
+      <div class="lo-quickadd-habit-list" id="lo-quickadd-habit-list" style="display:none;"></div>
+      <button class="lo-btn" id="lo-quickadd-submit" style="width:100%;margin-top:8px;">Pievienot</button>
+    `;
+    document.body.appendChild(panel);
+
+    let currentType = 'task';
+    const input = panel.querySelector('#lo-quickadd-input');
+    const habitList = panel.querySelector('#lo-quickadd-habit-list');
+    const submitBtn = panel.querySelector('#lo-quickadd-submit');
+    input.focus();
+
+    function refreshHabitList(){
+      const today = todayStr();
+      const pending = state.habits.habits.filter(h=> isHabitScheduled(h, today) && !(state.habits.logs[today] && state.habits.logs[today][h.id]));
+      habitList.innerHTML = pending.length
+        ? pending.map(h=>`<div class="lo-quickadd-habit-item" data-qa-habit="${h.id}">${escapeHtml(h.name)}</div>`).join('')
+        : `<div class="lo-empty" style="padding:8px 0;">Visi šodienas ieradumi jau izpildīti! 🎉</div>`;
+      habitList.querySelectorAll('[data-qa-habit]').forEach(el=>{
+        el.addEventListener('click', async ()=>{
+          const id = el.getAttribute('data-qa-habit');
+          const today2 = todayStr();
+          if(!state.habits.logs[today2]) state.habits.logs[today2] = {};
+          state.habits.logs[today2][id] = true;
+          await safeSet('habits-data', state.habits);
+          closeQuickAdd();
+          render();
+        });
+      });
+    }
+
+    panel.querySelectorAll('[data-qa-type]').forEach(tab=>{
+      tab.addEventListener('click', ()=>{
+        currentType = tab.getAttribute('data-qa-type');
+        panel.querySelectorAll('[data-qa-type]').forEach(t=>t.classList.remove('active'));
+        tab.classList.add('active');
+        const placeholders = { task: 'Uzraksti uzdevumu...', journal: 'Ātra doma šodienai...' };
+        if(currentType === 'habit'){
+          input.style.display = 'none';
+          submitBtn.style.display = 'none';
+          habitList.style.display = 'block';
+          refreshHabitList();
+        } else {
+          input.style.display = 'block';
+          submitBtn.style.display = 'block';
+          habitList.style.display = 'none';
+          input.placeholder = placeholders[currentType];
+          input.focus();
+        }
+      });
+    });
+
+    async function submit(){
+      const val = input.value.trim();
+      if(!val) return;
+      if(currentType === 'task'){
+        state.tasks.tasks.unshift({ id: uid(), text: val, project: '', dueDate: null, dueTime: null, priority: 'Vidēja', done: false });
+        await safeSet('tasks-data', state.tasks);
+      } else if(currentType === 'journal'){
+        const today = todayStr();
+        const existing = state.journal.entries[today] || '';
+        state.journal.entries[today] = existing ? existing + '\n' + val : val;
+        await safeSet('journal-data', state.journal);
+      }
+      closeQuickAdd();
+      render();
+    }
+    submitBtn.addEventListener('click', submit);
+    input.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){ submit(); }
+      if(e.key === 'Escape'){ closeQuickAdd(); }
+    });
+
+    const outsideHandler = (e)=>{
+      if(!panel.contains(e.target) && e.target !== triggerEl){
+        closeQuickAdd();
+        document.removeEventListener('mousedown', outsideHandler);
+      }
+    };
+    setTimeout(()=>{ document.addEventListener('mousedown', outsideHandler); }, 0);
+  }
+
   function closeTimePicker(){
     const existing = document.getElementById('lo-active-time-picker');
     if(existing){
@@ -2160,6 +2491,11 @@
   }
 
   function attachEvents(){
+    const quickAddFab = root.querySelector('#quick-add-fab');
+    if(quickAddFab){
+      quickAddFab.addEventListener('click', ()=>{ openQuickAdd(quickAddFab); });
+    }
+
     root.querySelectorAll('[data-open-time-picker]').forEach(btn=>{
       btn.addEventListener('click', (e)=>{
         e.preventDefault();
@@ -2392,6 +2728,30 @@
         render();
       });
     });
+    let dragSrcHabitIndex = null;
+    root.querySelectorAll('[data-drag-habit]').forEach(el=>{
+      el.addEventListener('dragstart', (e)=>{
+        dragSrcHabitIndex = parseInt(el.getAttribute('data-drag-habit'), 10);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      el.addEventListener('dragover', (e)=>{
+        e.preventDefault();
+        el.classList.add('lo-drag-over');
+      });
+      el.addEventListener('dragleave', ()=>{ el.classList.remove('lo-drag-over'); });
+      el.addEventListener('drop', async (e)=>{
+        e.preventDefault();
+        el.classList.remove('lo-drag-over');
+        const destIndex = parseInt(el.getAttribute('data-drag-habit'), 10);
+        if(dragSrcHabitIndex === null || dragSrcHabitIndex === destIndex) return;
+        const arr = state.habits.habits;
+        const [moved] = arr.splice(dragSrcHabitIndex, 1);
+        arr.splice(destIndex, 0, moved);
+        dragSrcHabitIndex = null;
+        await safeSet('habits-data', state.habits);
+        render();
+      });
+    });
     root.querySelectorAll('[data-del-habit]').forEach(el=>{
       el.addEventListener('click', async ()=>{
         const id = el.getAttribute('data-del-habit');
@@ -2468,6 +2828,40 @@
     });
     root.querySelectorAll('[data-filter]').forEach(el=>{
       el.addEventListener('click', ()=>{ state.taskFilter = el.getAttribute('data-filter'); render(); });
+    });
+    const taskSortSelect = root.querySelector('#task-sort-select');
+    if(taskSortSelect){
+      taskSortSelect.addEventListener('change', ()=>{ state.taskSort = taskSortSelect.value; render(); });
+    }
+    const taskProjectFilter = root.querySelector('#task-project-filter');
+    if(taskProjectFilter){
+      taskProjectFilter.addEventListener('change', ()=>{ state.taskProjectFilter = taskProjectFilter.value; render(); });
+    }
+
+    // Task drag-and-drop reordering
+    let dragSrcIndex = null;
+    root.querySelectorAll('[data-drag-task]').forEach(el=>{
+      el.addEventListener('dragstart', (e)=>{
+        dragSrcIndex = parseInt(el.getAttribute('data-drag-task'), 10);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      el.addEventListener('dragover', (e)=>{
+        e.preventDefault();
+        el.classList.add('lo-drag-over');
+      });
+      el.addEventListener('dragleave', ()=>{ el.classList.remove('lo-drag-over'); });
+      el.addEventListener('drop', async (e)=>{
+        e.preventDefault();
+        el.classList.remove('lo-drag-over');
+        const destIndex = parseInt(el.getAttribute('data-drag-task'), 10);
+        if(dragSrcIndex === null || dragSrcIndex === destIndex) return;
+        const arr = state.tasks.tasks;
+        const [moved] = arr.splice(dragSrcIndex, 1);
+        arr.splice(destIndex, 0, moved);
+        dragSrcIndex = null;
+        await safeSet('tasks-data', state.tasks);
+        render();
+      });
     });
 
     // Goals
@@ -2906,6 +3300,13 @@
       }
     });
   }
+  document.addEventListener('keydown', (e)=>{
+    if((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k'){
+      e.preventDefault();
+      if(state.loaded) openSearch();
+    }
+  });
+
   initAuth();
 })();
 </script>
