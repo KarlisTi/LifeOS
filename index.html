@@ -1199,6 +1199,10 @@
           <select class="lo-select" id="new-habit-area">
             ${AREAS.map(a=>`<option value="${a}">${a}</option>`).join('')}
           </select>
+        </div>
+        <div class="lo-row-form">
+          <input type="date" class="lo-input" id="new-habit-start-date" value="${todayStr()}" style="flex:1;min-width:130px;" title="Kopš kuras dienas seko līdzi" />
+          <input type="time" class="lo-input" id="new-habit-reminder-time" style="flex:0 0 110px;" title="Atgādinājuma laiks (nav obligāti)" />
           <button class="lo-btn" id="add-habit-btn">+ Pievienot</button>
         </div>
 
@@ -1208,7 +1212,7 @@
           <div class="lo-habit-item">
             <div class="lo-habit-name">
               <div class="lo-habit-title">${escapeHtml(h.name)}</div>
-              <div class="lo-habit-area">${h.area}</div>
+              <div class="lo-habit-area">${h.area}${h.startDate ? ' · kopš ' + h.startDate : ''}${h.reminderTime ? ' · 🔔 ' + h.reminderTime : ''}</div>
             </div>
             <div class="lo-streak-badge">🔥 ${streak}d</div>
             <div class="lo-week">
@@ -1899,9 +1903,17 @@
       addHabitBtn.addEventListener('click', async ()=>{
         const nameInput = root.querySelector('#new-habit-name');
         const areaSelect = root.querySelector('#new-habit-area');
+        const startDateInput = root.querySelector('#new-habit-start-date');
+        const reminderTimeInput = root.querySelector('#new-habit-reminder-time');
         const name = nameInput.value.trim();
         if(!name) return;
-        state.habits.habits.push({ id: uid(), name, area: areaSelect.value });
+        state.habits.habits.push({
+          id: uid(),
+          name,
+          area: areaSelect.value,
+          startDate: startDateInput.value || todayStr(),
+          reminderTime: reminderTimeInput.value || null,
+        });
         await safeSet('habits-data', state.habits);
         render();
       });
