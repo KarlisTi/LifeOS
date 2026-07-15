@@ -1394,7 +1394,7 @@
             <option value="monthly">Atkārtojas katru mēnesi</option>
           </select>
           <input type="date" class="lo-input" id="new-habit-start-date" value="${todayStr()}" style="flex:1;min-width:130px;" title="Kopš kuras dienas seko līdzi" />
-          <input type="time" class="lo-input" id="new-habit-reminder-time" style="flex:0 0 110px;" title="Atgādinājuma laiks (nav obligāti)" />
+          <input type="time" lang="lv" class="lo-input" id="new-habit-reminder-time" style="flex:0 0 110px;" title="Atgādinājuma laiks (nav obligāti)" />
         </div>
         <div class="lo-row-form" id="new-habit-weekdays-wrap" style="display:none;">
           ${DAY_LABELS.map((label,i)=>`
@@ -1449,7 +1449,7 @@
           <input class="lo-input" id="new-task-text" placeholder="Jauns uzdevums..." />
           <input class="lo-input" id="new-task-project" placeholder="Projekts (nav obligāti)" style="flex:1;min-width:120px;" />
           <input type="date" class="lo-input" id="new-task-due" style="flex:1;min-width:130px;" />
-          <input type="time" class="lo-input" id="new-task-due-time" style="flex:0 0 110px;" />
+          <input type="time" lang="lv" class="lo-input" id="new-task-due-time" style="flex:0 0 110px;" />
           <select class="lo-select" id="new-task-priority">
             <option value="Zema">Zema</option>
             <option value="Vidēja" selected>Vidēja</option>
@@ -1474,7 +1474,7 @@
                 </div>
                 <div class="lo-row-form">
                   <input type="date" class="lo-input" data-edit-due="${t.id}" value="${t.dueDate||''}" style="flex:1;min-width:120px;" />
-                  <input type="time" class="lo-input" data-edit-due-time="${t.id}" value="${t.dueTime||''}" style="flex:0 0 100px;" />
+                  <input type="time" lang="lv" class="lo-input" data-edit-due-time="${t.id}" value="${t.dueTime||''}" style="flex:0 0 100px;" />
                   <select class="lo-select" data-edit-priority="${t.id}" style="flex:0 0 110px;">
                     <option value="Zema" ${t.priority==='Zema'?'selected':''}>Zema</option>
                     <option value="Vidēja" ${t.priority==='Vidēja'?'selected':''}>Vidēja</option>
