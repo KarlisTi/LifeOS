@@ -1240,7 +1240,7 @@
                     <span class="lo-template-law">${t.law}</span>
                     <span class="lo-template-area">${t.area}</span>
                   </div>
-                  <button class="lo-template-add" data-add-template="${i}">+</button>
+                  <button class="lo-template-add" data-add-template="${i}" title="Aizpildīt formu ar šo paraugu">+</button>
                 </div>
               </div>
             `).join('')}
@@ -1963,13 +1963,18 @@
       templatesToggle.addEventListener('click', ()=>{ state.showTemplates = !state.showTemplates; render(); });
     }
     root.querySelectorAll('[data-add-template]').forEach(el=>{
-      el.addEventListener('click', async ()=>{
+      el.addEventListener('click', ()=>{
         const idx = parseInt(el.getAttribute('data-add-template'), 10);
         const t = HABIT_TEMPLATES[idx];
         if(!t) return;
-        state.habits.habits.push({ id: uid(), name: t.name, area: t.area });
-        await safeSet('habits-data', state.habits);
-        render();
+        const nameInput = root.querySelector('#new-habit-name');
+        const areaSelect = root.querySelector('#new-habit-area');
+        if(nameInput) nameInput.value = t.name;
+        if(areaSelect) areaSelect.value = t.area;
+        if(nameInput){
+          nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          nameInput.focus();
+        }
       });
     });
     const recurrenceSelect = root.querySelector('#new-habit-recurrence');
