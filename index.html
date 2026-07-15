@@ -187,6 +187,15 @@
   padding: 10px;
   width: 180px;
 }
+.lo-time-picker-manual {
+  width: 100%;
+  margin-bottom: 8px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
 .lo-time-picker-cols { display: flex; align-items: stretch; gap: 4px; height: 200px; }
 .lo-time-picker-col {
   flex: 1;
@@ -2038,6 +2047,7 @@
     const minutesCol = Array.from({length:60}, (_,i)=>i);
 
     panel.innerHTML = `
+      <input type="text" class="lo-input lo-time-picker-manual" id="lo-tp-manual" placeholder="HH:MM" value="${String(ch).padStart(2,'0')}:${String(cm).padStart(2,'0')}" inputmode="numeric" />
       <div class="lo-time-picker-cols">
         <div class="lo-time-picker-col" id="lo-tp-hours">
           ${hoursCol.map(h=>`<div class="lo-time-picker-item ${h===ch?'selected':''}" data-h="${h}">${String(h).padStart(2,'0')}</div>`).join('')}
@@ -2065,11 +2075,46 @@
     panel.style.left = left + 'px';
 
     let selH = ch, selM = cm;
+    const manualInput = panel.querySelector('#lo-tp-manual');
+
+    function highlightWheel(){
+      panel.querySelectorAll('#lo-tp-hours .lo-time-picker-item').forEach(x=>{
+        x.classList.toggle('selected', parseInt(x.getAttribute('data-h'),10)===selH);
+      });
+      panel.querySelectorAll('#lo-tp-minutes .lo-time-picker-item').forEach(x=>{
+        x.classList.toggle('selected', parseInt(x.getAttribute('data-m'),10)===selM);
+      });
+      const hEl = panel.querySelector(`#lo-tp-hours .lo-time-picker-item[data-h="${selH}"]`);
+      if(hEl) hEl.scrollIntoView({ block: 'center' });
+      const mEl = panel.querySelector(`#lo-tp-minutes .lo-time-picker-item[data-m="${selM}"]`);
+      if(mEl) mEl.scrollIntoView({ block: 'center' });
+    }
+
+    function syncManualToWheel(){
+      const val = manualInput.value.trim();
+      const m = val.match(/^([0-9]{1,2}):([0-9]{1,2})$/);
+      if(!m) return false;
+      const hh = parseInt(m[1],10), mm = parseInt(m[2],10);
+      if(hh<0 || hh>23 || mm<0 || mm>59) return false;
+      selH = hh; selM = mm;
+      highlightWheel();
+      return true;
+    }
+
+    manualInput.addEventListener('input', ()=>{
+      manualInput.value = manualInput.value.replace(/[^0-9:]/g, '');
+    });
+    manualInput.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){ e.preventDefault(); syncManualToWheel(); }
+    });
+    manualInput.addEventListener('blur', ()=>{ syncManualToWheel(); });
+
     panel.querySelectorAll('#lo-tp-hours .lo-time-picker-item').forEach(el=>{
       el.addEventListener('click', ()=>{
         selH = parseInt(el.getAttribute('data-h'), 10);
         panel.querySelectorAll('#lo-tp-hours .lo-time-picker-item').forEach(x=>x.classList.remove('selected'));
         el.classList.add('selected');
+        manualInput.value = String(selH).padStart(2,'0') + ':' + String(selM).padStart(2,'0');
       });
     });
     panel.querySelectorAll('#lo-tp-minutes .lo-time-picker-item').forEach(el=>{
@@ -2077,6 +2122,7 @@
         selM = parseInt(el.getAttribute('data-m'), 10);
         panel.querySelectorAll('#lo-tp-minutes .lo-time-picker-item').forEach(x=>x.classList.remove('selected'));
         el.classList.add('selected');
+        manualInput.value = String(selH).padStart(2,'0') + ':' + String(selM).padStart(2,'0');
       });
     });
 
@@ -2086,6 +2132,7 @@
     if(selMEl) selMEl.scrollIntoView({ block: 'center' });
 
     panel.querySelector('#lo-tp-done').addEventListener('click', ()=>{
+      syncManualToWheel();
       const val = String(selH).padStart(2,'0') + ':' + String(selM).padStart(2,'0');
       onSelect(val);
       closeTimePicker();
