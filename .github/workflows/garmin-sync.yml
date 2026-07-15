@@ -22,7 +22,7 @@ jobs:
         env:
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
-          SB_URL: ${{ secrets.SUPABASE_URL }}
-          SB_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SB_URL: ${{ secrets.SB_URL }}
+          SB_SERVICE_ROLE_KEY: ${{ secrets.SB_SERVICE_ROLE_KEY }}
         run: python scripts/garmin_sync.py
  
