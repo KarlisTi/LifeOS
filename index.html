@@ -185,9 +185,9 @@
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(0,0,0,0.5);
   padding: 10px;
-  width: 160px;
+  width: 180px;
 }
-.lo-time-picker-cols { display: flex; align-items: stretch; gap: 4px; height: 180px; }
+.lo-time-picker-cols { display: flex; align-items: stretch; gap: 4px; height: 200px; }
 .lo-time-picker-col {
   flex: 1;
   overflow-y: auto;
@@ -197,19 +197,20 @@
 }
 .lo-time-picker-col::-webkit-scrollbar { width: 5px; }
 .lo-time-picker-col::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-.lo-time-picker-sep { display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+.lo-time-picker-sep { display: flex; align-items: center; justify-content: center; color: var(--text); font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 16px; }
 .lo-time-picker-item {
-  padding: 8px 0;
+  padding: 10px 0;
   text-align: center;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
   cursor: pointer;
   scroll-snap-align: center;
   border-radius: 5px;
 }
-.lo-time-picker-item:hover { background: var(--bg-panel); color: var(--text); }
-.lo-time-picker-item.selected { background: var(--accent); color: #06231F; font-weight: 700; }
+.lo-time-picker-item:hover { background: var(--bg-panel); color: var(--accent); }
+.lo-time-picker-item.selected { background: var(--accent); color: #06231F; font-weight: 800; }
 .lo-time-picker-actions { display: flex; gap: 6px; margin-top: 10px; }
 .lo-time-picker-actions .lo-btn { flex: 1; font-size: 11px; padding: 7px; }
 
