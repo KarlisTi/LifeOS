@@ -6,7 +6,7 @@ fetches today's sleep, resting heart rate, and activities, and writes them
 into the Life OS `health-data` record in Supabase.
 
 Required environment variables:
-  GARMIN_EMAIL, GARMIN_PASSWORD, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+  GARMIN_EMAIL, GARMIN_PASSWORD, SB_URL, SB_SERVICE_ROLE_KEY
 """
 import os
 import sys
@@ -17,8 +17,8 @@ from garminconnect import Garmin
 
 GARMIN_EMAIL = os.environ["GARMIN_EMAIL"]
 GARMIN_PASSWORD = os.environ["GARMIN_PASSWORD"]
-SUPABASE_URL = os.environ["SUPABASE_URL"].rstrip("/")
-SUPABASE_SERVICE_ROLE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+SB_URL = os.environ["SB_URL"].rstrip("/")
+SB_SERVICE_ROLE_KEY = os.environ["SB_SERVICE_ROLE_KEY"]
 
 
 def sleep_score_to_quality(score):
@@ -91,13 +91,13 @@ def main():
     workouts = fetch_workouts(client, today)
 
     headers = {
-        "apikey": SUPABASE_SERVICE_ROLE_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "apikey": SB_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SB_SERVICE_ROLE_KEY}",
         "Content-Type": "application/json",
     }
 
     resp = requests.get(
-        f"{SUPABASE_URL}/rest/v1/life_os_data",
+        f"{SB_URL}/rest/v1/life_os_data",
         headers=headers,
         params={"key": "eq.health-data", "select": "id,value", "limit": 1},
         timeout=20,
@@ -128,7 +128,7 @@ def main():
     health_data["entries"] = entries
 
     update_resp = requests.patch(
-        f"{SUPABASE_URL}/rest/v1/life_os_data",
+        f"{SB_URL}/rest/v1/life_os_data",
         headers=headers,
         params={"id": f"eq.{row['id']}"},
         json={"value": health_data, "updated_at": datetime.now(timezone.utc).isoformat()},
