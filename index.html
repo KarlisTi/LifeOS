@@ -466,6 +466,28 @@
 .lo-track-name { font-weight: 700; font-size: 14.5px; flex: 1; }
 .lo-track-pct { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); }
 .lo-topic-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.lo-topic-block { border-bottom: 1px solid var(--border); }
+.lo-topic-block:last-of-type { border-bottom: none; }
+.lo-topic-notes-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 6px;
+  cursor: pointer;
+  opacity: 0.5;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.lo-topic-notes-btn:hover { opacity: 1; border-color: var(--border); }
+.lo-topic-notes-btn.has-notes { opacity: 1; }
+.lo-topic-notes-editor { padding: 0 0 12px 34px; }
+.lo-code-textarea {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  min-height: 90px;
+  white-space: pre;
+}
 .lo-topic-text { flex: 1; font-size: 13px; }
 .lo-topic-text.done { color: var(--text-dim); text-decoration: line-through; }
 .lo-topic-add-row { display: flex; gap: 8px; margin-top: 8px; }
@@ -784,6 +806,7 @@
     journal: { entries: {} },
     learning: { tracks: [] },
     openNotes: {},
+    openTopicNotes: {},
     showTemplates: true,
     calYear: new Date().getFullYear(),
     calMonth: new Date().getMonth(),
@@ -1555,13 +1578,24 @@
           </div>
           <div class="lo-progress-track"><div class="lo-progress-fill" style="width:${pct}%"></div></div>
 
-          ${tr.topics.length ? tr.topics.map(top=>`
-            <div class="lo-topic-row">
-              <div class="lo-task-check ${top.done?'done':''}" data-toggle-topic="${tr.id}|${top.id}">${top.done?'✓':''}</div>
-              <div class="lo-topic-text ${top.done?'done':''}">${escapeHtml(top.text)}</div>
-              <button class="lo-btn danger-ghost" data-del-topic="${tr.id}|${top.id}">✕</button>
+          ${tr.topics.length ? tr.topics.map(top=>{
+            const topicNotesOpen = !!state.openTopicNotes[top.id];
+            return `
+            <div class="lo-topic-block">
+              <div class="lo-topic-row">
+                <div class="lo-task-check ${top.done?'done':''}" data-toggle-topic="${tr.id}|${top.id}">${top.done?'✓':''}</div>
+                <div class="lo-topic-text ${top.done?'done':''}">${escapeHtml(top.text)}</div>
+                <button class="lo-topic-notes-btn ${top.details ? 'has-notes':''}" data-toggle-topic-notes="${top.id}" title="Piezīmes / sintakse">📝</button>
+                <button class="lo-btn danger-ghost" data-del-topic="${tr.id}|${top.id}">✕</button>
+              </div>
+              ${topicNotesOpen ? `
+                <div class="lo-topic-notes-editor">
+                  <textarea class="lo-textarea lo-code-textarea" data-topic-details="${tr.id}|${top.id}" placeholder="Piezīmes, skaidrojumi, koda / sintakses piemēri...">${escapeHtml(top.details||'')}</textarea>
+                  <button class="lo-btn ghost" data-save-topic-details="${tr.id}|${top.id}" style="margin-top:6px;">Saglabāt</button>
+                </div>
+              ` : ''}
             </div>
-          `).join('') : `<div class="lo-empty" style="padding:10px 0;">Vēl nav tēmu. Pievieno pirmo zemāk.</div>`}
+          `;}).join('') : `<div class="lo-empty" style="padding:10px 0;">Vēl nav tēmu. Pievieno pirmo zemāk.</div>`}
 
           <div class="lo-topic-add-row">
             <input class="lo-input" placeholder="Jauna tēma / atskaites punkts..." data-topic-input="${tr.id}" />
@@ -2331,6 +2365,24 @@
         const [trackId, topicId] = el.getAttribute('data-del-topic').split('|');
         const track = state.learning.tracks.find(t=>t.id===trackId);
         track.topics = track.topics.filter(t=>t.id!==topicId);
+        await safeSet('learning-data', state.learning);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-toggle-topic-notes]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const topicId = el.getAttribute('data-toggle-topic-notes');
+        state.openTopicNotes[topicId] = !state.openTopicNotes[topicId];
+        render();
+      });
+    });
+    root.querySelectorAll('[data-save-topic-details]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [trackId, topicId] = el.getAttribute('data-save-topic-details').split('|');
+        const track = state.learning.tracks.find(t=>t.id===trackId);
+        const topic = track.topics.find(t=>t.id===topicId);
+        const textarea = root.querySelector(`[data-topic-details="${trackId}|${topicId}"]`);
+        topic.details = textarea.value;
         await safeSet('learning-data', state.learning);
         render();
       });
