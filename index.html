@@ -657,6 +657,115 @@
     { name: 'Piezvanīt vai uzrakstīt tuviniekam', area: 'Attiecības', law: 'Apmierinošu' },
     { name: '10 minūtes radoša hobija', area: 'Radošums', law: 'Pievilcīgu' },
   ];
+
+  const LEARNING_TRACK_TEMPLATES = {
+    linux: {
+      name: 'Linux',
+      topics: [
+        '[1. mēn.] Instalē Linux distribūciju (Ubuntu/Debian) — VM vai dual-boot',
+        '[1. mēn.] Iepazīsti failu sistēmas struktūru (/, /home, /etc, /var, /usr)',
+        '[1. mēn.] Apgūsti pamata komandas: ls, cd, pwd, mkdir, rm, cp, mv',
+        '[1. mēn.] 🛠 Praksē: izveido savu "cheat sheet" ar 20 biežāk lietotām komandām',
+        '[2. mēn.] Faila tiesības un chmod/chown pārvaldība',
+        '[2. mēn.] Simboliskās un cietās saites (symlinks, hardlinks)',
+        '[2. mēn.] Meklēšana un filtrēšana: find, grep, locate',
+        '[2. mēn.] 🛠 Praksē: uzraksti skriptu, kas atrod un arhivē .log failus, kas vecāki par 30 dienām',
+        '[3. mēn.] Procesu pārvaldība: ps, top, htop, kill',
+        '[3. mēn.] Systemd un pakalpojumu pārvaldība (systemctl)',
+        '[3. mēn.] Cron uzdevumi un plānošana',
+        '[3. mēn.] 🛠 Praksē: izveido cron uzdevumu, kas katru nakti veic dublējumu',
+        '[4. mēn.] Bash pamati: mainīgie, apstākļi (if/else)',
+        '[4. mēn.] Cilpas bash skriptos (for, while)',
+        '[4. mēn.] Funkcijas bash skriptos',
+        '[4. mēn.] 🛠 Praksē: uzraksti skriptu, kas automātiski instalē vajadzīgās pakotnes jaunā serverī',
+        '[5. mēn.] Ievades apstrāde skriptos (argumenti, read)',
+        '[5. mēn.] Teksta apstrāde: sed un awk pamati',
+        '[5. mēn.] Skriptu atkļūdošana (bash -x, set -e)',
+        '[5. mēn.] 🛠 Praksē: uzraksti log-analīzes skriptu, kas izgūst kļūdas no servera žurnāla',
+        '[6. mēn.] Tīkla pamatjēdzieni: IP adreses, DNS, porti',
+        '[6. mēn.] Tīkla komandas: ping, curl, wget, ss/netstat',
+        '[6. mēn.] SSH un attālinātā piekļuve',
+        '[6. mēn.] 🛠 Praksē: konfigurē SSH atslēgu autentifikāciju attālinātam serverim',
+        '[7. mēn.] Pakotņu pārvaldnieki (apt/yum/dnf)',
+        '[7. mēn.] Sistēmas atjaunināšana un drošības pamati',
+        '[7. mēn.] Diska pārvaldība (df, du, lsblk, fdisk)',
+        '[7. mēn.] 🛠 Praksē: uzstādi un konfigurē pilnu LAMP/LEMP steku',
+        '[8. mēn.] Lietotāju un grupu pārvaldība',
+        '[8. mēn.] Ugunsmūris (ufw/iptables) pamati',
+        '[8. mēn.] Sistēmas žurnāli un uzraudzība (journalctl)',
+        '[8. mēn.] 🛠 Praksē: konfigurē ugunsmūri, kas atļauj tikai SSH un HTTP/HTTPS',
+        '[9. mēn.] Docker pamati: images un containers',
+        '[9. mēn.] Dockerfile veidošana',
+        '[9. mēn.] Docker Compose vairāku servisu palaišanai',
+        '[9. mēn.] 🛠 Praksē: konteinerizē savu projektu ar Docker',
+        '[10. mēn.] Ansible pamati un konfigurācijas pārvaldība',
+        '[10. mēn.] Automātiska servera uzstādīšana ar playbook',
+        '[10. mēn.] Infrastructure as Code principi',
+        '[10. mēn.] 🛠 Praksē: uzraksti Ansible playbook, kas automātiski uzstāda web serveri',
+        '[11. mēn.] Web servera konfigurācija (Nginx/Apache)',
+        '[11. mēn.] SSL sertifikāti ar bezmaksas CA (Let\'s Encrypt)',
+        '[11. mēn.] Dublēšanas un atjaunošanas stratēģijas',
+        '[11. mēn.] 🛠 Praksē: izveido pilnībā funkcionējošu VPS ar domēnu un SSL',
+        '[12. mēn.] Sistēmas veiktspējas optimizācija',
+        '[12. mēn.] Reālu problēmu diagnostika (troubleshooting)',
+        '[12. mēn.] 🛠 Noslēguma projekts: pilna servera uzstādīšana no nulles',
+        '[12. mēn.] 🛠 Praksē: dokumentē visu procesu kā personīgu "runbook"',
+      ],
+    },
+    python: {
+      name: 'Python',
+      topics: [
+        '[1. mēn.] Uzstādi Python un iestati virtuālo vidi (venv/pip)',
+        '[1. mēn.] Mainīgie, datu tipi, pamata operācijas',
+        '[1. mēn.] Nosacījumi: if / elif / else',
+        '[1. mēn.] 🛠 Praksē: uzraksti komandrindas kalkulatoru',
+        '[2. mēn.] Saraksti (lists) un kortēži (tuples)',
+        '[2. mēn.] Vārdnīcas (dicts) un kopas (sets)',
+        '[2. mēn.] Cilpas: for, while, list comprehensions',
+        '[2. mēn.] 🛠 Praksē: uzraksti programmu, kas analizē teksta failu un skaita vārdu biežumu',
+        '[3. mēn.] Funkciju definēšana, argumenti, atgriešanas vērtības',
+        '[3. mēn.] Moduļi un pakotnes (import)',
+        '[3. mēn.] Kļūdu apstrāde (try/except)',
+        '[3. mēn.] 🛠 Praksē: sadali iepriekšējo projektu vairākos moduļos',
+        '[4. mēn.] Klases un objekti (OOP pamati)',
+        '[4. mēn.] Mantošana un polimorfisms',
+        '[4. mēn.] Speciālās metodes (__init__, __str__)',
+        '[4. mēn.] 🛠 Praksē: uzraksti bankas konta simulāciju ar klasēm',
+        '[5. mēn.] Failu lasīšana/rakstīšana (txt, csv)',
+        '[5. mēn.] JSON datu apstrāde',
+        '[5. mēn.] Datumu un laika apstrāde (datetime)',
+        '[5. mēn.] 🛠 Praksē: uzraksti skriptu, kas eksportē datus no CSV uz JSON',
+        '[6. mēn.] HTTP pieprasījumi ar requests bibliotēku',
+        '[6. mēn.] REST API pamati',
+        '[6. mēn.] Web scraping ar BeautifulSoup',
+        '[6. mēn.] 🛠 Praksē: uzraksti skriptu, kas iegūst laika ziņas no publiska API',
+        '[7. mēn.] SQL pamati',
+        '[7. mēn.] SQLite ar Python (sqlite3 modulis)',
+        '[7. mēn.] ORM pamati (SQLAlchemy)',
+        '[7. mēn.] 🛠 Praksē: izveido uzdevumu sarakstu ar SQLite backend',
+        '[8. mēn.] Unit testēšana ar pytest',
+        '[8. mēn.] Koda stils un linting (PEP8)',
+        '[8. mēn.] Versiju kontrole ar Git',
+        '[8. mēn.] 🛠 Praksē: pievieno testus vienam no iepriekšējiem projektiem',
+        '[9. mēn.] Failu sistēmas automatizācija (os, shutil moduļi)',
+        '[9. mēn.] Plānoto uzdevumu skriptēšana',
+        '[9. mēn.] E-pastu/paziņojumu automatizācija',
+        '[9. mēn.] 🛠 Praksē: uzraksti skriptu, kas automātiski dublē failus mākonī',
+        '[10. mēn.] NumPy pamati',
+        '[10. mēn.] Pandas datu apstrādei',
+        '[10. mēn.] Datu vizualizācija ar matplotlib',
+        '[10. mēn.] 🛠 Praksē: analizē un vizualizē savus izdevumu datus no Life OS',
+        '[11. mēn.] Flask vai FastAPI pamati',
+        '[11. mēn.] REST API veidošana',
+        '[11. mēn.] Vienkārša web lietotne ar datubāzi',
+        '[11. mēn.] 🛠 Praksē: uzbūvē mini API savam Life OS projektam',
+        '[12. mēn.] Koda optimizācija un veiktspēja',
+        '[12. mēn.] Izvietošana (Docker/serveris)',
+        '[12. mēn.] 🛠 Noslēguma projekts: lietotne no idejas līdz izvietošanai',
+        '[12. mēn.] 🛠 Praksē: izvieto savu Python projektu tiešsaistē',
+      ],
+    },
+  };
   const root = document.getElementById('lifeos-app');
 
   const state = {
@@ -1419,6 +1528,15 @@
       <div class="lo-module-sub">Prasmju izsekošana — katrai jomai (Linux, Python u.c.) sava karte ar tēmām un piezīmēm.</div>
 
       <div class="lo-panel">
+        <div class="lo-panel-title">Gatavi 12 mēnešu mācību plāni</div>
+        <div class="lo-module-sub" style="margin-bottom:12px;">Katrs plāns satur ~48 tēmas pa mēnešiem, ar praktiskiem uzdevumiem (🛠) katrā posmā.</div>
+        <div class="lo-row-form">
+          <button class="lo-btn ghost" data-load-learning-template="linux">+ Linux (12 mēn. plāns)</button>
+          <button class="lo-btn ghost" data-load-learning-template="python">+ Python (12 mēn. plāns)</button>
+        </div>
+      </div>
+
+      <div class="lo-panel">
         <div class="lo-row-form">
           <input class="lo-input" id="new-track-name" placeholder="Jauna prasme (piem., Linux, Python, Ģitāra)" />
           <button class="lo-btn" id="add-track-btn">+ Pievienot</button>
@@ -2142,6 +2260,31 @@
     });
 
     // Learning
+    root.querySelectorAll('[data-load-learning-template]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const key = el.getAttribute('data-load-learning-template');
+        const tpl = LEARNING_TRACK_TEMPLATES[key];
+        if(!tpl) return;
+        let track = state.learning.tracks.find(t=>t.name.toLowerCase()===tpl.name.toLowerCase());
+        if(!track){
+          track = { id: uid(), name: tpl.name, topics: [], notes: '' };
+          state.learning.tracks.push(track);
+        }
+        const existingTexts = new Set(track.topics.map(t=>t.text));
+        let added = 0;
+        tpl.topics.forEach(text=>{
+          if(!existingTexts.has(text)){
+            track.topics.push({ id: uid(), text, done: false });
+            added++;
+          }
+        });
+        await safeSet('learning-data', state.learning);
+        render();
+        if(added === 0){
+          alert(`"${tpl.name}" plāns jau ir pilnībā ielādēts.`);
+        }
+      });
+    });
     const addTrackBtn = root.querySelector('#add-track-btn');
     if(addTrackBtn){
       addTrackBtn.addEventListener('click', async ()=>{
