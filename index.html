@@ -162,6 +162,57 @@
 .lo-player input.lo-input { font-size: 11px; padding: 7px 8px; margin-bottom: 6px; }
 .lo-player button.lo-btn { width: 100%; font-size: 11px; padding: 7px; }
 
+/* ---- Custom Time Picker ---- */
+.lo-time-picker-wrap { display: contents; }
+.lo-time-picker-btn {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  flex: 0 0 100px;
+  text-align: center;
+}
+.lo-time-picker-btn:hover { border-color: var(--accent); color: var(--accent); }
+.lo-time-picker-panel {
+  position: absolute;
+  z-index: 9999;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  padding: 10px;
+  width: 160px;
+}
+.lo-time-picker-cols { display: flex; align-items: stretch; gap: 4px; height: 180px; }
+.lo-time-picker-col {
+  flex: 1;
+  overflow-y: auto;
+  scroll-snap-type: y proximity;
+  border-radius: 6px;
+  background: var(--bg-raised);
+}
+.lo-time-picker-col::-webkit-scrollbar { width: 5px; }
+.lo-time-picker-col::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.lo-time-picker-sep { display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+.lo-time-picker-item {
+  padding: 8px 0;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  scroll-snap-align: center;
+  border-radius: 5px;
+}
+.lo-time-picker-item:hover { background: var(--bg-panel); color: var(--text); }
+.lo-time-picker-item.selected { background: var(--accent); color: #06231F; font-weight: 700; }
+.lo-time-picker-actions { display: flex; gap: 6px; margin-top: 10px; }
+.lo-time-picker-actions .lo-btn { flex: 1; font-size: 11px; padding: 7px; }
+
 /* ---- Auth ---- */
 .lo-auth-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .lo-auth-card { width: 300px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px; text-align: center; }
@@ -1112,6 +1163,7 @@
   }
 
   function render(){
+    closeTimePicker();
     if(!state.loaded){
       root.innerHTML = `<div style="padding:40px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:13px;">Ielādē sistēmu...</div>`;
       return;
@@ -1394,7 +1446,10 @@
             <option value="monthly">Atkārtojas katru mēnesi</option>
           </select>
           <input type="date" class="lo-input" id="new-habit-start-date" value="${todayStr()}" style="flex:1;min-width:130px;" title="Kopš kuras dienas seko līdzi" />
-          <input type="time" lang="lv" class="lo-input" id="new-habit-reminder-time" style="flex:0 0 110px;" title="Atgādinājuma laiks (nav obligāti)" />
+          <div class="lo-time-picker-wrap" title="Atgādinājuma laiks (nav obligāti)">
+            <button type="button" class="lo-time-picker-btn" data-open-time-picker>🕐 Laiks</button>
+            <input type="hidden" id="new-habit-reminder-time" value="" />
+          </div>
         </div>
         <div class="lo-row-form" id="new-habit-weekdays-wrap" style="display:none;">
           ${DAY_LABELS.map((label,i)=>`
@@ -1449,7 +1504,10 @@
           <input class="lo-input" id="new-task-text" placeholder="Jauns uzdevums..." />
           <input class="lo-input" id="new-task-project" placeholder="Projekts (nav obligāti)" style="flex:1;min-width:120px;" />
           <input type="date" class="lo-input" id="new-task-due" style="flex:1;min-width:130px;" />
-          <input type="time" lang="lv" class="lo-input" id="new-task-due-time" style="flex:0 0 110px;" />
+          <div class="lo-time-picker-wrap">
+            <button type="button" class="lo-time-picker-btn" data-open-time-picker>🕐 Laiks</button>
+            <input type="hidden" id="new-task-due-time" value="" />
+          </div>
           <select class="lo-select" id="new-task-priority">
             <option value="Zema">Zema</option>
             <option value="Vidēja" selected>Vidēja</option>
@@ -1474,7 +1532,10 @@
                 </div>
                 <div class="lo-row-form">
                   <input type="date" class="lo-input" data-edit-due="${t.id}" value="${t.dueDate||''}" style="flex:1;min-width:120px;" />
-                  <input type="time" lang="lv" class="lo-input" data-edit-due-time="${t.id}" value="${t.dueTime||''}" style="flex:0 0 100px;" />
+                  <div class="lo-time-picker-wrap">
+                    <button type="button" class="lo-time-picker-btn" data-open-time-picker>${t.dueTime ? t.dueTime : '🕐 Laiks'}</button>
+                    <input type="hidden" data-edit-due-time="${t.id}" value="${t.dueTime||''}" />
+                  </div>
                   <select class="lo-select" data-edit-priority="${t.id}" style="flex:0 0 110px;">
                     <option value="Zema" ${t.priority==='Zema'?'selected':''}>Zema</option>
                     <option value="Vidēja" ${t.priority==='Vidēja'?'selected':''}>Vidēja</option>
@@ -1953,6 +2014,95 @@
     if(!str) return '';
     return str.length > len ? str.slice(0, len).trim() + '…' : str;
   }
+  function closeTimePicker(){
+    const existing = document.getElementById('lo-active-time-picker');
+    if(existing){
+      if(existing._outsideHandler) document.removeEventListener('mousedown', existing._outsideHandler);
+      existing.remove();
+    }
+  }
+
+  function openTimePicker(triggerEl, currentValue, onSelect){
+    closeTimePicker();
+    const rect = triggerEl.getBoundingClientRect();
+    const panel = document.createElement('div');
+    panel.className = 'lo-time-picker-panel';
+    panel.id = 'lo-active-time-picker';
+
+    let [ch, cm] = (currentValue || '').split(':').map(v=>parseInt(v,10));
+    if(isNaN(ch)) ch = new Date().getHours();
+    if(isNaN(cm)) cm = 0;
+
+    const hoursCol = Array.from({length:24}, (_,i)=>i);
+    const minutesCol = Array.from({length:60}, (_,i)=>i);
+
+    panel.innerHTML = `
+      <div class="lo-time-picker-cols">
+        <div class="lo-time-picker-col" id="lo-tp-hours">
+          ${hoursCol.map(h=>`<div class="lo-time-picker-item ${h===ch?'selected':''}" data-h="${h}">${String(h).padStart(2,'0')}</div>`).join('')}
+        </div>
+        <div class="lo-time-picker-sep">:</div>
+        <div class="lo-time-picker-col" id="lo-tp-minutes">
+          ${minutesCol.map(m=>`<div class="lo-time-picker-item ${m===cm?'selected':''}" data-m="${m}">${String(m).padStart(2,'0')}</div>`).join('')}
+        </div>
+      </div>
+      <div class="lo-time-picker-actions">
+        <button type="button" class="lo-btn ghost" id="lo-tp-clear">Notīrīt</button>
+        <button type="button" class="lo-btn" id="lo-tp-done">Gatavs</button>
+      </div>
+    `;
+    document.body.appendChild(panel);
+
+    let top = rect.bottom + window.scrollY + 6;
+    let left = rect.left + window.scrollX;
+    const panelWidth = panel.offsetWidth;
+    if(left + panelWidth > window.innerWidth - 10) left = Math.max(10, window.innerWidth - panelWidth - 10);
+    if(top + panel.offsetHeight > window.innerHeight + window.scrollY - 10){
+      top = rect.top + window.scrollY - panel.offsetHeight - 6;
+    }
+    panel.style.top = top + 'px';
+    panel.style.left = left + 'px';
+
+    let selH = ch, selM = cm;
+    panel.querySelectorAll('#lo-tp-hours .lo-time-picker-item').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        selH = parseInt(el.getAttribute('data-h'), 10);
+        panel.querySelectorAll('#lo-tp-hours .lo-time-picker-item').forEach(x=>x.classList.remove('selected'));
+        el.classList.add('selected');
+      });
+    });
+    panel.querySelectorAll('#lo-tp-minutes .lo-time-picker-item').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        selM = parseInt(el.getAttribute('data-m'), 10);
+        panel.querySelectorAll('#lo-tp-minutes .lo-time-picker-item').forEach(x=>x.classList.remove('selected'));
+        el.classList.add('selected');
+      });
+    });
+
+    const selHEl = panel.querySelector(`#lo-tp-hours .lo-time-picker-item[data-h="${selH}"]`);
+    if(selHEl) selHEl.scrollIntoView({ block: 'center' });
+    const selMEl = panel.querySelector(`#lo-tp-minutes .lo-time-picker-item[data-m="${selM}"]`);
+    if(selMEl) selMEl.scrollIntoView({ block: 'center' });
+
+    panel.querySelector('#lo-tp-done').addEventListener('click', ()=>{
+      const val = String(selH).padStart(2,'0') + ':' + String(selM).padStart(2,'0');
+      onSelect(val);
+      closeTimePicker();
+    });
+    panel.querySelector('#lo-tp-clear').addEventListener('click', ()=>{
+      onSelect('');
+      closeTimePicker();
+    });
+
+    const outsideHandler = (e)=>{
+      if(!panel.contains(e.target) && e.target !== triggerEl){
+        closeTimePicker();
+      }
+    };
+    panel._outsideHandler = outsideHandler;
+    setTimeout(()=>{ document.addEventListener('mousedown', outsideHandler); }, 0);
+  }
+
   function escapeHtml(str){
     const d = document.createElement('div');
     d.textContent = str;
@@ -1960,6 +2110,18 @@
   }
 
   function attachEvents(){
+    root.querySelectorAll('[data-open-time-picker]').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const hiddenInput = btn.nextElementSibling;
+        if(!hiddenInput) return;
+        openTimePicker(btn, hiddenInput.value, (newVal)=>{
+          hiddenInput.value = newVal;
+          btn.textContent = newVal ? newVal : '🕐 Laiks';
+        });
+      });
+    });
+
     const logoutBtn = root.querySelector('#logout-btn');
     if(logoutBtn){
       logoutBtn.addEventListener('click', async ()=>{
