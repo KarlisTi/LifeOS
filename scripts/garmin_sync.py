@@ -51,11 +51,9 @@ def fetch_sleep(client, today):
 
 def fetch_resting_hr(client, today):
     try:
-        data = client.get_rhr_day(today)
-        metrics = (data or {}).get("allMetrics", {}).get("metricsMap", {})
-        rhr_list = metrics.get("WELLNESS_RESTING_HEART_RATE") or []
-        if rhr_list:
-            return rhr_list[0].get("value")
+        hr = client.get_heart_rates(today)
+        if hr:
+            return hr.get("restingHeartRate")
     except Exception as e:
         print(f"[warn] resting HR fetch failed: {e}")
     return None
@@ -82,7 +80,7 @@ def fetch_workouts(client, today):
 def main():
     today = date.today().isoformat()
 
-    client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
+    client = Garmin(email=GARMIN_EMAIL, password=GARMIN_PASSWORD)
     client.login()
     print("Logged into Garmin Connect.")
 
