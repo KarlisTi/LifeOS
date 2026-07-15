@@ -662,7 +662,7 @@
     calMonth: new Date().getMonth(),
     calSelectedDate: fmtDate(new Date()),
     editingTaskId: null,
-    finance: { transactions: [] },
+    finance: { transactions: [], budgets: [] },
     financeView: 'summary',
     finVizYear: new Date().getFullYear(),
     finVizMonth: new Date().getMonth(),
@@ -763,7 +763,8 @@
     state.goals = await safeGet('goals-data', { goals: [] });
     state.journal = await safeGet('journal-data', { entries: {} });
     state.learning = await safeGet('learning-data', { tracks: [] });
-    state.finance = await safeGet('finance-data', { transactions: [] });
+    state.finance = await safeGet('finance-data', { transactions: [], budgets: [] });
+    if(!state.finance.budgets) state.finance.budgets = [];
     state.health = await safeGet('health-data', { entries: {} });
     state.banner = await safeGet('banner-data', { src: null, posY: 50 });
     if(state.banner.posY === undefined) state.banner.posY = 50;
@@ -1562,6 +1563,46 @@
         <div class="lo-panel-title">Darījumi</div>
         ${renderTxList()}
       </div>
+
+      ${renderBudgetSection()}
+    `;
+  }
+
+  function renderBudgetSection(){
+    const now = new Date();
+    const { byCategory } = monthTotals(now.getFullYear(), now.getMonth());
+    const monthLabel = now.toLocaleDateString('lv-LV', { month: 'long', year: 'numeric' });
+    const budgets = state.finance.budgets;
+
+    return `
+      <div class="lo-panel">
+        <div class="lo-panel-title">Budžets — ${monthLabel}</div>
+        <div class="lo-row-form">
+          <input class="lo-input" id="new-budget-category" list="tx-category-list" placeholder="Kategorija" style="flex:1;min-width:120px;" />
+          <input class="lo-input" id="new-budget-limit" type="number" step="1" min="0" placeholder="Limits (€/mēn.)" style="flex:1;min-width:120px;" />
+          <button class="lo-btn" id="add-budget-btn">+ Pievienot</button>
+        </div>
+
+        ${budgets.length ? budgets.map(b=>{
+          const spent = byCategory[b.category] || 0;
+          const pct = b.limit > 0 ? Math.min(100, Math.round((spent / b.limit) * 100)) : 0;
+          const over = spent > b.limit;
+          const barColor = over ? 'var(--danger)' : (pct >= 80 ? 'var(--warn)' : 'var(--accent)');
+          return `
+          <div class="lo-goal-item">
+            <div class="lo-goal-top">
+              <div class="lo-goal-text">${escapeHtml(b.category)}</div>
+              <div class="lo-goal-area-tag" style="color:${over ? 'var(--danger)' : 'var(--text-muted)'};">€${spent.toFixed(2)} / €${b.limit.toFixed(2)}</div>
+            </div>
+            <div class="lo-progress-track"><div class="lo-progress-fill" style="width:${pct}%;background:${barColor};"></div></div>
+            <div class="lo-goal-controls">
+              <div style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;color:${over ? 'var(--danger)' : 'var(--text-dim)'};">${over ? '⚠ Pārsniegts par €' + (spent - b.limit).toFixed(2) : pct + '% izmantots'}</div>
+              <button class="lo-btn danger-ghost" data-del-budget="${b.id}">✕</button>
+            </div>
+          </div>
+          `;
+        }).join('') : `<div class="lo-empty">Vēl nav iestatītu budžetu. Pievieno kategoriju un ikmēneša limitu augstāk.</div>`}
+      </div>
     `;
   }
 
@@ -2096,6 +2137,32 @@
       el.addEventListener('click', async ()=>{
         const id = el.getAttribute('data-del-tx');
         state.finance.transactions = state.finance.transactions.filter(t=>t.id!==id);
+        await safeSet('finance-data', state.finance);
+        render();
+      });
+    });
+    const addBudgetBtn = root.querySelector('#add-budget-btn');
+    if(addBudgetBtn){
+      addBudgetBtn.addEventListener('click', async ()=>{
+        const categoryInput = root.querySelector('#new-budget-category');
+        const limitInput = root.querySelector('#new-budget-limit');
+        const category = categoryInput.value.trim();
+        const limit = parseFloat(limitInput.value);
+        if(!category || !limit || limit <= 0) return;
+        const existing = state.finance.budgets.find(b=>b.category.toLowerCase()===category.toLowerCase());
+        if(existing){
+          existing.limit = limit;
+        } else {
+          state.finance.budgets.push({ id: uid(), category, limit });
+        }
+        await safeSet('finance-data', state.finance);
+        render();
+      });
+    }
+    root.querySelectorAll('[data-del-budget]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-del-budget');
+        state.finance.budgets = state.finance.budgets.filter(b=>b.id!==id);
         await safeSet('finance-data', state.finance);
         render();
       });
