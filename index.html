@@ -350,7 +350,25 @@
   flex-shrink: 0;
 }
 .lo-day-box.done { background: var(--accent); color: #06231F; border-color: var(--accent); font-weight: 700; }
+.lo-day-box.not-scheduled { opacity: 0.32; }
+.lo-day-box.not-scheduled.done { opacity: 0.6; }
 .lo-day-box:hover { border-color: var(--accent); }
+.lo-weekday-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.lo-weekday-chip:has(input:checked) { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.lo-weekday-chip input { accent-color: var(--accent); cursor: pointer; }
 .lo-streak-badge {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
@@ -791,15 +809,50 @@
     return `<div class="lo-nav-item ${state.module===key?'active':''}" data-nav="${key}">${icon(key)}<span class="lbl">${label}</span></div>`;
   }
 
+  function isHabitScheduled(h, dateStr){
+    if(h.startDate && dateStr < h.startDate) return false;
+    const rec = h.recurrence || 'daily';
+    if(rec === 'daily') return true;
+    if(rec === 'weekly'){
+      const dow = new Date(dateStr+'T00:00:00').getDay();
+      return (h.weekdays||[]).includes(dow);
+    }
+    if(rec === 'monthly'){
+      const dayNum = parseInt(dateStr.slice(8,10),10);
+      return dayNum === (h.monthDay || 1);
+    }
+    return true;
+  }
+
+  function recurrenceLabel(h){
+    const rec = h.recurrence || 'daily';
+    if(rec === 'daily') return 'katru dienu';
+    if(rec === 'weekly'){
+      const names = (h.weekdays||[]).slice().sort().map(i=>DAY_LABELS[i]);
+      return names.length ? 'katru nedēļu (' + names.join(', ') + ')' : 'katru nedēļu';
+    }
+    if(rec === 'monthly') return 'katru mēnesi, ' + (h.monthDay || 1) + '. dienā';
+    return '';
+  }
+
   function currentStreak(habitId){
+    const habit = state.habits.habits.find(h=>h.id===habitId);
+    if(!habit) return 0;
     let streak = 0;
     let d = new Date();
-    while(true){
+    let guard = 0;
+    while(guard < 3660){
+      guard++;
       const ds = fmtDate(d);
-      if(state.habits.logs[ds] && state.habits.logs[ds][habitId]){
-        streak++;
+      if(habit.startDate && ds < habit.startDate) break;
+      if(isHabitScheduled(habit, ds)){
+        if(state.habits.logs[ds] && state.habits.logs[ds][habitId]){
+          streak++;
+          d.setDate(d.getDate()-1);
+        } else break;
+      } else {
         d.setDate(d.getDate()-1);
-      } else break;
+      }
     }
     return streak;
   }
@@ -845,8 +898,9 @@
           ${cells.map(dateStr=>{
             if(!dateStr) return `<div class="lo-cal-cell empty"></div>`;
             const dayNum = parseInt(dateStr.slice(8,10),10);
-            const doneCount = totalHabits ? state.habits.habits.filter(h => state.habits.logs[dateStr] && state.habits.logs[dateStr][h.id]).length : 0;
-            const habitDotClass = totalHabits===0 ? '' : (doneCount===totalHabits ? 'habit-full' : (doneCount>0 ? 'habit-partial' : ''));
+            const scheduledHabits = state.habits.habits.filter(h=>isHabitScheduled(h, dateStr));
+            const doneCount = scheduledHabits.length ? scheduledHabits.filter(h => state.habits.logs[dateStr] && state.habits.logs[dateStr][h.id]).length : 0;
+            const habitDotClass = scheduledHabits.length===0 ? '' : (doneCount===scheduledHabits.length ? 'habit-full' : (doneCount>0 ? 'habit-partial' : ''));
             const dayTasks = state.tasks.tasks.filter(t=>t.dueDate===dateStr);
             const hasJournal = !!state.journal.entries[dateStr];
             return `
@@ -880,7 +934,8 @@
     const date = state.calSelectedDate;
     if(!date) return '';
     const dayTasks = state.tasks.tasks.filter(t=>t.dueDate===date).sort((a,b)=>(a.dueTime||'').localeCompare(b.dueTime||''));
-    const dayHabitsDone = state.habits.habits.filter(h => state.habits.logs[date] && state.habits.logs[date][h.id]);
+    const scheduledDayHabits = state.habits.habits.filter(h=>isHabitScheduled(h, date));
+    const dayHabitsDone = scheduledDayHabits.filter(h => state.habits.logs[date] && state.habits.logs[date][h.id]);
     const journalText = state.journal.entries[date];
     const dateLabel = new Date(date+'T00:00:00').toLocaleDateString('lv-LV', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -906,7 +961,7 @@
         </div>
 
         <div class="lo-cal-detail-section">
-          <div class="lo-cal-detail-label">${icon('habits')} Izpildītie ieradumi (${dayHabitsDone.length}/${state.habits.habits.length})</div>
+          <div class="lo-cal-detail-label">${icon('habits')} Izpildītie ieradumi (${dayHabitsDone.length}/${scheduledDayHabits.length})</div>
           ${dayHabitsDone.length ? dayHabitsDone.map(h=>`
             <div class="lo-proc-row">
               <div class="lo-proc-dot on"></div>
@@ -1075,7 +1130,7 @@
   // ---------------- DASHBOARD ----------------
   function renderDashboard(){
     const today = todayStr();
-    const habits = state.habits.habits;
+    const habits = state.habits.habits.filter(h=>isHabitScheduled(h, today));
     const doneToday = habits.filter(h => state.habits.logs[today] && state.habits.logs[today][h.id]).length;
     const activeTasks = state.tasks.tasks.filter(t=>!t.done);
     const doneTasks = state.tasks.tasks.filter(t=>t.done);
@@ -1201,8 +1256,26 @@
           </select>
         </div>
         <div class="lo-row-form">
+          <select class="lo-select" id="new-habit-recurrence" style="flex:1;min-width:150px;">
+            <option value="daily">Atkārtojas katru dienu</option>
+            <option value="weekly">Atkārtojas katru nedēļu</option>
+            <option value="monthly">Atkārtojas katru mēnesi</option>
+          </select>
           <input type="date" class="lo-input" id="new-habit-start-date" value="${todayStr()}" style="flex:1;min-width:130px;" title="Kopš kuras dienas seko līdzi" />
           <input type="time" class="lo-input" id="new-habit-reminder-time" style="flex:0 0 110px;" title="Atgādinājuma laiks (nav obligāti)" />
+        </div>
+        <div class="lo-row-form" id="new-habit-weekdays-wrap" style="display:none;">
+          ${DAY_LABELS.map((label,i)=>`
+            <label class="lo-weekday-chip">
+              <input type="checkbox" class="new-habit-weekday-cb" value="${i}" />
+              <span>${label}</span>
+            </label>
+          `).join('')}
+        </div>
+        <div class="lo-row-form" id="new-habit-monthday-wrap" style="display:none;">
+          <input type="number" class="lo-input" id="new-habit-month-day" min="1" max="31" placeholder="Mēneša diena (1-31)" style="flex:0 0 180px;" />
+        </div>
+        <div class="lo-row-form">
           <button class="lo-btn" id="add-habit-btn">+ Pievienot</button>
         </div>
 
@@ -1212,13 +1285,14 @@
           <div class="lo-habit-item">
             <div class="lo-habit-name">
               <div class="lo-habit-title">${escapeHtml(h.name)}</div>
-              <div class="lo-habit-area">${h.area}${h.startDate ? ' · kopš ' + h.startDate : ''}${h.reminderTime ? ' · 🔔 ' + h.reminderTime : ''}</div>
+              <div class="lo-habit-area">${h.area} · ${recurrenceLabel(h)}${h.reminderTime ? ' · 🔔 ' + h.reminderTime : ''}</div>
             </div>
             <div class="lo-streak-badge">🔥 ${streak}d</div>
             <div class="lo-week">
               ${week.map(d=>{
                 const on = !!(state.habits.logs[d] && state.habits.logs[d][h.id]);
-                return `<div class="lo-day-box ${on?'done':''}" data-habit-day="${h.id}|${d}">${dayLabel(d)}</div>`;
+                const scheduled = isHabitScheduled(h, d);
+                return `<div class="lo-day-box ${on?'done':''} ${!scheduled?'not-scheduled':''}" data-habit-day="${h.id}|${d}">${dayLabel(d)}</div>`;
               }).join('')}
             </div>
             <button class="lo-btn danger-ghost" data-del-habit="${h.id}">✕</button>
@@ -1898,6 +1972,15 @@
         render();
       });
     });
+    const recurrenceSelect = root.querySelector('#new-habit-recurrence');
+    const weekdaysWrap = root.querySelector('#new-habit-weekdays-wrap');
+    const monthdayWrap = root.querySelector('#new-habit-monthday-wrap');
+    if(recurrenceSelect){
+      recurrenceSelect.addEventListener('change', ()=>{
+        if(weekdaysWrap) weekdaysWrap.style.display = recurrenceSelect.value === 'weekly' ? 'flex' : 'none';
+        if(monthdayWrap) monthdayWrap.style.display = recurrenceSelect.value === 'monthly' ? 'flex' : 'none';
+      });
+    }
     const addHabitBtn = root.querySelector('#add-habit-btn');
     if(addHabitBtn){
       addHabitBtn.addEventListener('click', async ()=>{
@@ -1905,15 +1988,28 @@
         const areaSelect = root.querySelector('#new-habit-area');
         const startDateInput = root.querySelector('#new-habit-start-date');
         const reminderTimeInput = root.querySelector('#new-habit-reminder-time');
+        const recurrenceSel = root.querySelector('#new-habit-recurrence');
         const name = nameInput.value.trim();
         if(!name) return;
-        state.habits.habits.push({
+        const recurrence = recurrenceSel ? recurrenceSel.value : 'daily';
+        const newHabit = {
           id: uid(),
           name,
           area: areaSelect.value,
           startDate: startDateInput.value || todayStr(),
           reminderTime: reminderTimeInput.value || null,
-        });
+          recurrence,
+        };
+        if(recurrence === 'weekly'){
+          const checked = Array.from(root.querySelectorAll('.new-habit-weekday-cb:checked')).map(cb=>parseInt(cb.value,10));
+          newHabit.weekdays = checked.length ? checked : [new Date().getDay()];
+        }
+        if(recurrence === 'monthly'){
+          const monthDayInput = root.querySelector('#new-habit-month-day');
+          const md = parseInt(monthDayInput.value, 10);
+          newHabit.monthDay = (md >= 1 && md <= 31) ? md : new Date().getDate();
+        }
+        state.habits.habits.push(newHabit);
         await safeSet('habits-data', state.habits);
         render();
       });
