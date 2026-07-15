@@ -1583,6 +1583,19 @@
           <button class="lo-btn" id="add-budget-btn">+ Pievienot</button>
         </div>
 
+        ${budgets.length ? (()=>{
+          const totalBudgeted = budgets.reduce((s,b)=>s+b.limit,0);
+          const totalSpent = budgets.reduce((s,b)=>s+(byCategory[b.category]||0),0);
+          const remaining = totalBudgeted - totalSpent;
+          return `
+            <div class="lo-grid" style="margin-bottom:16px;">
+              <div class="lo-card"><div class="lo-card-label">Kopā ieplānots</div><div class="lo-card-value">€${totalBudgeted.toFixed(2)}</div></div>
+              <div class="lo-card"><div class="lo-card-label">Kopā iztērēts</div><div class="lo-card-value" style="color:${totalSpent>totalBudgeted?'var(--danger)':'var(--text)'};">€${totalSpent.toFixed(2)}</div></div>
+              <div class="lo-card"><div class="lo-card-label">Atlicis</div><div class="lo-card-value" style="color:${remaining<0?'var(--danger)':'var(--accent)'};">€${remaining.toFixed(2)}</div></div>
+            </div>
+          `;
+        })() : ''}
+
         ${budgets.length ? budgets.map(b=>{
           const spent = byCategory[b.category] || 0;
           const pct = b.limit > 0 ? Math.min(100, Math.round((spent / b.limit) * 100)) : 0;
