@@ -464,6 +464,33 @@
   flex-shrink: 0;
   width: 30px;
 }
+.lo-icon-quickpick { display: flex; flex-wrap: wrap; gap: 4px; }
+.lo-icon-quickpick-btn {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 30px; height: 30px;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.lo-icon-quickpick-btn:hover { border-color: var(--accent); }
+.lo-color-swatches { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lo-color-swatch {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.lo-color-swatch.selected { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg-panel), 0 0 0 3px var(--text); }
+.lo-color-swatch-none {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+}
 .lo-row-form .lo-input { flex: 2; min-width: 140px; }
 .lo-row-form .lo-select { flex: 1; min-width: 110px; }
 
@@ -835,6 +862,8 @@
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const AREAS = ['Veselība','Karjera','Finanses','Attiecības','Izaugsme','Radošums'];
+  const TASK_ICON_PRESETS = ['📌','💼','🏠','💪','📚','🎯','💰','✈️','🛒','❤️','🎉','⚡','📞','🔧','🎨','🍽️'];
+  const TASK_COLOR_PRESETS = ['#4FD1C5','#E8A33D','#E8615C','#7C9EF5','#C77DFF','#5EEAD4','#F4A261','#94A3B8'];
   const HABIT_TEMPLATES = [
     { name: 'Izdzert glāzi ūdens uzreiz pēc pamošanās', area: 'Veselība', law: 'Vienkāršu' },
     { name: '10 pietupieni pirms dušas', area: 'Veselība', law: 'Sasaisti ar esošu ieradumu' },
@@ -1102,6 +1131,7 @@
   function icon(name){
     const icons = {
       dashboard: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
+      calendar: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
       habits: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2l4 4-4 4"/><path d="M3 12v-2a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 12v2a4 4 0 0 1-4 4H3"/></svg>',
       tasks: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
       goals: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>',
@@ -1204,6 +1234,29 @@
     return cells;
   }
 
+  function renderCalendarPage(){
+    const now = new Date();
+    const monthTasks = state.tasks.tasks.filter(t=>{
+      if(!t.dueDate) return false;
+      const key = `${state.calYear}-${String(state.calMonth+1).padStart(2,'0')}`;
+      return t.dueDate.slice(0,7) === key || (t.endDate && t.endDate.slice(0,7) === key);
+    });
+    const monthJournalCount = Object.keys(state.journal.entries).filter(d=>d.slice(0,7) === `${state.calYear}-${String(state.calMonth+1).padStart(2,'0')}`).length;
+
+    return `
+      <div class="lo-module-title">Kalendārs</div>
+      <div class="lo-module-sub">Pilns pārskats — uzdevumi, ieradumi un dienasgrāmata vienuviet.</div>
+
+      <div class="lo-grid" style="margin-bottom:16px;">
+        <div class="lo-card"><div class="lo-card-label">Uzdevumi šomēnes</div><div class="lo-card-value">${monthTasks.length}</div></div>
+        <div class="lo-card"><div class="lo-card-label">Dienasgrāmatas ieraksti</div><div class="lo-card-value accent">${monthJournalCount}</div></div>
+        <div class="lo-card"><div class="lo-card-label">Aktīvie ieradumi</div><div class="lo-card-value warn">${state.habits.habits.length}</div></div>
+      </div>
+
+      ${renderCalendar()}
+    `;
+  }
+
   function renderCalendar(){
     const cells = buildCalendarCells(state.calYear, state.calMonth);
     const today = todayStr();
@@ -1240,7 +1293,7 @@
                   </div>
                 </div>
                 ${dayTasks.length ? `
-                  <div class="lo-cal-task-preview">${escapeHtml(truncateText(dayTasks[0].text, 14))}</div>
+                  <div class="lo-cal-task-preview">${dayTasks[0].icon ? escapeHtml(dayTasks[0].icon)+' ' : ''}${escapeHtml(truncateText(dayTasks[0].text, 12))}</div>
                   ${dayTasks.length>1 ? `<div class="lo-cal-task-more">+${dayTasks.length-1} vēl</div>` : ''}
                 ` : ''}
               </div>
@@ -1276,9 +1329,9 @@
         <div class="lo-cal-detail-section">
           <div class="lo-cal-detail-label">${icon('tasks')} Uzdevumi (${dayTasks.length})</div>
           ${dayTasks.length ? dayTasks.map(t=>`
-            <div class="lo-task-item">
+            <div class="lo-task-item" style="${t.color ? `border-left:3px solid ${t.color};padding-left:9px;` : ''}">
               <div class="lo-task-check ${t.done?'done':''}" data-toggle-task="${t.id}">${t.done ? '✓' : ''}</div>
-              <div class="lo-task-text ${t.done?'done':''}">${escapeHtml(t.text)}</div>
+              <div class="lo-task-text ${t.done?'done':''}">${t.icon ? escapeHtml(t.icon)+' ' : ''}${escapeHtml(t.text)}</div>
               <div class="lo-task-tags">
                 ${t.dueTime ? `<span class="lo-tag">${t.dueTime}</span>` : ''}
                 <span class="lo-tag prio-${t.priority}">${t.priority}</span>
@@ -1321,6 +1374,7 @@
         ${renderPlayer()}
         <div class="lo-nav">
           ${navItem('dashboard','Pārskats')}
+          ${navItem('calendar','Kalendārs')}
           ${navItem('habits','Ieradumi')}
           ${navItem('tasks','Uzdevumi')}
           ${navItem('goals','Mērķi')}
@@ -1442,12 +1496,13 @@
   }
 
   function moduleTitleLine(){
-    const map = { dashboard: 'root@lifeos:~$ status', habits: 'root@lifeos:~$ ./habits', tasks: 'root@lifeos:~$ ./tasks', goals: 'root@lifeos:~$ ./goals', learning: 'root@lifeos:~$ ./learning', finance: 'root@lifeos:~$ ./finance', health: 'root@lifeos:~$ ./health', journal: 'root@lifeos:~$ ./journal' };
+    const map = { dashboard: 'root@lifeos:~$ status', calendar: 'root@lifeos:~$ ./calendar', habits: 'root@lifeos:~$ ./habits', tasks: 'root@lifeos:~$ ./tasks', goals: 'root@lifeos:~$ ./goals', learning: 'root@lifeos:~$ ./learning', finance: 'root@lifeos:~$ ./finance', health: 'root@lifeos:~$ ./health', journal: 'root@lifeos:~$ ./journal' };
     return map[state.module] || '';
   }
 
   function renderModule(){
     if(state.module==='dashboard') return renderDashboard();
+    if(state.module==='calendar') return renderCalendarPage();
     if(state.module==='habits') return renderHabits();
     if(state.module==='tasks') return renderTasks();
     if(state.module==='goals') return renderGoals();
@@ -1519,9 +1574,9 @@
       <div class="lo-panel">
         <div class="lo-panel-title">${icon('tasks')} Tuvākie uzdevumi</div>
         ${topTasks.length ? topTasks.map(t=>`
-          <div class="lo-task-item" style="border-bottom:1px solid var(--border);">
+          <div class="lo-task-item" style="border-bottom:1px solid var(--border);${t.color ? `border-left:3px solid ${t.color};padding-left:9px;` : ''}">
             <div class="lo-task-check" data-toggle-task="${t.id}"></div>
-            <div class="lo-task-text">${escapeHtml(t.text)}</div>
+            <div class="lo-task-text">${t.icon ? escapeHtml(t.icon)+' ' : ''}${escapeHtml(t.text)}</div>
             <div class="lo-task-tags">
               ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${formatTaskDateRange(t)}</span>` : ''}
               ${t.priority ? `<span class="lo-tag prio-${t.priority}">${t.priority}</span>` : ''}
@@ -1544,7 +1599,13 @@
         }).join('') : `<div class="lo-empty">Nav pievienotu ieradumu. Ej uz "Ieradumi", lai sāktu.</div>`}
       </div>
 
-      ${renderCalendar()}
+      <div class="lo-panel" id="dashboard-cal-link" style="cursor:pointer;" data-goto-calendar>
+        <div class="lo-panel-title" style="justify-content:space-between;">
+          <span style="display:flex;align-items:center;gap:8px;">${icon('calendar')} Kalendārs</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);">Atvērt →</span>
+        </div>
+        <div class="lo-module-sub" style="margin-bottom:0;">Pilns mēneša skats ar uzdevumiem, ieradumiem un dienasgrāmatu tagad ir savā sadaļā.</div>
+      </div>
 
       ${renderFinancePanel()}
     `;
@@ -1670,6 +1731,7 @@
 
       <div class="lo-panel">
         <div class="lo-row-form">
+          <input class="lo-input" id="new-task-icon" placeholder="🏷️" maxlength="4" style="flex:0 0 56px;text-align:center;" title="Emocijzīme (nav obligāti)" />
           <input class="lo-input" id="new-task-text" placeholder="Jauns uzdevums..." />
           <input class="lo-input" id="new-task-project" placeholder="Projekts (nav obligāti)" style="flex:1;min-width:120px;" />
           <select class="lo-select" id="new-task-priority">
@@ -1677,6 +1739,15 @@
             <option value="Vidēja" selected>Vidēja</option>
             <option value="Augsta">Augsta</option>
           </select>
+        </div>
+        <div class="lo-row-form">
+          <div class="lo-icon-quickpick" id="new-task-icon-quickpick">
+            ${TASK_ICON_PRESETS.map(e=>`<button type="button" class="lo-icon-quickpick-btn" data-pick-icon="${e}">${e}</button>`).join('')}
+          </div>
+          <div class="lo-color-swatches" id="new-task-color-swatches" data-selected-color="">
+            ${TASK_COLOR_PRESETS.map(c=>`<button type="button" class="lo-color-swatch" data-pick-color="${c}" style="background:${c};"></button>`).join('')}
+            <button type="button" class="lo-color-swatch lo-color-swatch-none" data-pick-color="" title="Bez krāsas">✕</button>
+          </div>
         </div>
         <div class="lo-row-form">
           <div class="lo-daterange-field">
@@ -1725,8 +1796,18 @@
             return `
               <div class="lo-task-edit-row">
                 <div class="lo-row-form" style="margin-bottom:8px;">
+                  <input class="lo-input" data-edit-icon="${t.id}" value="${escapeHtml(t.icon||'')}" placeholder="🏷️" maxlength="4" style="flex:0 0 56px;text-align:center;" />
                   <input class="lo-input" data-edit-text="${t.id}" value="${escapeHtml(t.text)}" placeholder="Uzdevums..." />
                   <input class="lo-input" data-edit-project="${t.id}" value="${escapeHtml(t.project||'')}" placeholder="Projekts" style="flex:1;min-width:110px;" />
+                </div>
+                <div class="lo-row-form" style="margin-bottom:8px;">
+                  <div class="lo-icon-quickpick" data-edit-icon-quickpick="${t.id}">
+                    ${TASK_ICON_PRESETS.map(e=>`<button type="button" class="lo-icon-quickpick-btn" data-pick-icon-edit="${e}">${e}</button>`).join('')}
+                  </div>
+                  <div class="lo-color-swatches" data-edit-color-swatches="${t.id}" data-selected-color="${t.color||''}">
+                    ${TASK_COLOR_PRESETS.map(c=>`<button type="button" class="lo-color-swatch ${t.color===c?'selected':''}" data-pick-color="${c}" style="background:${c};"></button>`).join('')}
+                    <button type="button" class="lo-color-swatch lo-color-swatch-none" data-pick-color="" title="Bez krāsas">✕</button>
+                  </div>
                 </div>
                 <div class="lo-row-form">
                   <div class="lo-daterange-field">
@@ -1759,10 +1840,10 @@
             `;
           }
           return `
-          <div class="lo-task-item" ${canDrag ? `draggable="true" data-drag-task="${t._origIndex}"` : ''}>
+          <div class="lo-task-item" ${canDrag ? `draggable="true" data-drag-task="${t._origIndex}"` : ''} style="${t.color ? `border-left:3px solid ${t.color};padding-left:9px;` : ''}">
             ${canDrag ? `<div class="lo-drag-handle">⠿</div>` : ''}
             <div class="lo-task-check ${t.done?'done':''}" data-toggle-task="${t.id}">${t.done ? '✓' : ''}</div>
-            <div class="lo-task-text ${t.done?'done':''}">${escapeHtml(t.text)}</div>
+            <div class="lo-task-text ${t.done?'done':''}">${t.icon ? escapeHtml(t.icon) + ' ' : ''}${escapeHtml(t.text)}</div>
             <div class="lo-task-tags">
               <span class="lo-tag prio-${t.priority}">${t.priority}</span>
               ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
@@ -2548,6 +2629,10 @@
     if(quickAddFab){
       quickAddFab.addEventListener('click', ()=>{ openQuickAdd(quickAddFab); });
     }
+    const gotoCalendar = root.querySelector('[data-goto-calendar]');
+    if(gotoCalendar){
+      gotoCalendar.addEventListener('click', ()=>{ state.module = 'calendar'; render(); });
+    }
 
     root.querySelectorAll('[data-open-time-picker]').forEach(btn=>{
       btn.addEventListener('click', (e)=>{
@@ -2815,21 +2900,41 @@
     });
 
     // Tasks
+    root.querySelectorAll('#new-task-icon-quickpick [data-pick-icon]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const input = root.querySelector('#new-task-icon');
+        if(input) input.value = btn.getAttribute('data-pick-icon');
+      });
+    });
+    const newTaskColorSwatches = root.querySelector('#new-task-color-swatches');
+    if(newTaskColorSwatches){
+      newTaskColorSwatches.querySelectorAll('[data-pick-color]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          newTaskColorSwatches.setAttribute('data-selected-color', btn.getAttribute('data-pick-color'));
+          newTaskColorSwatches.querySelectorAll('.lo-color-swatch').forEach(b=>b.classList.remove('selected'));
+          btn.classList.add('selected');
+        });
+      });
+    }
     const addTaskBtn = root.querySelector('#add-task-btn');
     if(addTaskBtn){
       addTaskBtn.addEventListener('click', async ()=>{
         const textInput = root.querySelector('#new-task-text');
+        const iconInput = root.querySelector('#new-task-icon');
         const projectInput = root.querySelector('#new-task-project');
         const dueInput = root.querySelector('#new-task-due');
         const dueTimeInput = root.querySelector('#new-task-due-time');
         const endDateInput = root.querySelector('#new-task-end-date');
         const endTimeInput = root.querySelector('#new-task-end-time');
         const prioSelect = root.querySelector('#new-task-priority');
+        const colorSwatches = root.querySelector('#new-task-color-swatches');
         const text = textInput.value.trim();
         if(!text) return;
         state.tasks.tasks.unshift({
           id: uid(),
           text,
+          icon: iconInput ? iconInput.value.trim() : '',
+          color: colorSwatches ? (colorSwatches.getAttribute('data-selected-color') || null) : null,
           project: projectInput.value.trim(),
           dueDate: dueInput.value || null,
           dueTime: dueTimeInput.value || null,
@@ -2869,12 +2974,32 @@
         render();
       });
     });
+    root.querySelectorAll('[data-edit-icon-quickpick]').forEach(wrap=>{
+      const id = wrap.getAttribute('data-edit-icon-quickpick');
+      wrap.querySelectorAll('[data-pick-icon-edit]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const input = root.querySelector(`[data-edit-icon="${id}"]`);
+          if(input) input.value = btn.getAttribute('data-pick-icon-edit');
+        });
+      });
+    });
+    root.querySelectorAll('[data-edit-color-swatches]').forEach(wrap=>{
+      wrap.querySelectorAll('[data-pick-color]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          wrap.setAttribute('data-selected-color', btn.getAttribute('data-pick-color'));
+          wrap.querySelectorAll('.lo-color-swatch').forEach(b=>b.classList.remove('selected'));
+          btn.classList.add('selected');
+        });
+      });
+    });
     root.querySelectorAll('[data-save-edit-task]').forEach(el=>{
       el.addEventListener('click', async ()=>{
         const id = el.getAttribute('data-save-edit-task');
         const t = state.tasks.tasks.find(t=>t.id===id);
         if(!t) return;
         const textInput = root.querySelector(`[data-edit-text="${id}"]`);
+        const iconInput = root.querySelector(`[data-edit-icon="${id}"]`);
+        const colorSwatches = root.querySelector(`[data-edit-color-swatches="${id}"]`);
         const projectInput = root.querySelector(`[data-edit-project="${id}"]`);
         const dueInput = root.querySelector(`[data-edit-due="${id}"]`);
         const dueTimeInput = root.querySelector(`[data-edit-due-time="${id}"]`);
@@ -2884,6 +3009,8 @@
         const newText = textInput.value.trim();
         if(!newText) return;
         t.text = newText;
+        t.icon = iconInput ? iconInput.value.trim() : '';
+        t.color = colorSwatches ? (colorSwatches.getAttribute('data-selected-color') || null) : null;
         t.project = projectInput.value.trim();
         t.dueDate = dueInput.value || null;
         t.dueTime = dueTimeInput.value || null;
