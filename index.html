@@ -1031,6 +1031,46 @@
   };
 
   let financeChartInstance = null;
+  let habitsChartInstance = null;
+
+  function habitsConsistencyData(days){
+    const labels = [];
+    const percentages = [];
+    const today = new Date();
+    for(let i = days - 1; i >= 0; i--){
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const ds = fmtDate(d);
+      const scheduled = state.habits.habits.filter(h=>isHabitScheduled(h, ds));
+      const done = scheduled.filter(h=> state.habits.logs[ds] && state.habits.logs[ds][h.id]);
+      const pct = scheduled.length ? Math.round((done.length / scheduled.length) * 100) : 0;
+      labels.push(ds.slice(5));
+      percentages.push(pct);
+    }
+    return { labels, percentages };
+  }
+
+  function mountHabitsChart(){
+    const canvas = root.querySelector('#habits-chart');
+    if(!canvas || !window.Chart) return;
+    if(habitsChartInstance){ habitsChartInstance.destroy(); habitsChartInstance = null; }
+    const { labels, percentages } = habitsConsistencyData(30);
+    const ctx = canvas.getContext('2d');
+    habitsChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Izpildīts (%)', data: percentages, backgroundColor: '#4FD1C5', borderRadius: 3 }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#7B8494', font: { size: 9 }, maxRotation: 90, minRotation: 90 }, grid: { display: false } },
+          y: { min: 0, max: 100, ticks: { color: '#7B8494', font: { size: 10 }, callback: v=>v+'%' }, grid: { color: '#212733' } }
+        }
+      }
+    });
+  }
+
   function loadChartJs(cb){
     if(window.Chart){ cb(); return; }
     const existing = document.getElementById('lifeos-chartjs');
@@ -1619,6 +1659,13 @@
       <div class="lo-module-title">Ieradumi</div>
       <div class="lo-module-sub">Ikdienas fona procesi. Atzīmē katru dienu, kad ieradums izpildīts.</div>
 
+      ${habits.length ? `
+        <div class="lo-panel">
+          <div class="lo-panel-title">${icon('habits')} Konsekvence — pēdējās 30 dienas</div>
+          <div class="lo-chart-wrap"><canvas id="habits-chart"></canvas></div>
+        </div>
+      ` : ''}
+
       <div class="lo-templates-toggle" id="templates-toggle">${state.showTemplates ? '▾' : '▸'} IETEIKTIE IERADUMI (Atomic Habits)</div>
       ${state.showTemplates ? `
         <div class="lo-panel">
@@ -2117,6 +2164,8 @@
     return `
       <div class="lo-module-title">Finanses</div>
       <div class="lo-module-sub">Ienākumu un izdevumu uzskaite.</div>
+
+      ${renderFinancePanel()}
 
       <div class="lo-panel">
         <div class="lo-row-form">
@@ -3290,8 +3339,11 @@
         render();
       });
     });
-    if(state.module==='dashboard'){
+    if(state.module==='dashboard' || state.module==='finance'){
       loadChartJs(()=>{ mountFinanceChart(); });
+    }
+    if(state.module==='habits'){
+      loadChartJs(()=>{ mountHabitsChart(); });
     }
 
     // Health
