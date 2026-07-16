@@ -464,7 +464,9 @@
   flex-shrink: 0;
   width: 30px;
 }
-.lo-icon-quickpick { display: flex; flex-wrap: wrap; gap: 4px; }
+.lo-icon-quickpick { display: flex; flex-wrap: wrap; gap: 4px; max-height: 76px; overflow-y: auto; padding-right: 2px; }
+.lo-icon-quickpick::-webkit-scrollbar { width: 5px; }
+.lo-icon-quickpick::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 .lo-icon-quickpick-btn {
   background: var(--bg-raised);
   border: 1px solid var(--border);
@@ -862,7 +864,18 @@
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const AREAS = ['Veselība','Karjera','Finanses','Attiecības','Izaugsme','Radošums'];
-  const TASK_ICON_PRESETS = ['📌','💼','🏠','💪','📚','🎯','💰','✈️','🛒','❤️','🎉','⚡','📞','🔧','🎨','🍽️'];
+  const TASK_ICON_PRESETS = [
+    '📌','✅','⭐','⚡','🔥','⏰','🎯','📝',
+    '💼','💻','📊','📧','📞','🗓️','🖊️','📁',
+    '🏠','🧹','🔧','🔑','🛋️','🚪','🧺','🪴',
+    '💪','🏃','🧘','💊','🩺','🦷','😴','🥗',
+    '🛒','🍽️','☕','🍎','🍕','🎂','🍷',
+    '💰','💳','🏦','📈','🧾',
+    '✈️','🚗','🗺️','🎒','⛽',
+    '❤️','👨‍👩‍👧','🎉','🎁','👋','💬',
+    '📚','🎓','✏️',
+    '🎨','🎵','🐾','🌱','🎮','📷','⚽'
+  ];
   const TASK_COLOR_PRESETS = ['#4FD1C5','#E8A33D','#E8615C','#7C9EF5','#C77DFF','#5EEAD4','#F4A261','#94A3B8'];
   const HABIT_TEMPLATES = [
     { name: 'Izdzert glāzi ūdens uzreiz pēc pamošanās', area: 'Veselība', law: 'Vienkāršu' },
