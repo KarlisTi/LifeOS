@@ -456,6 +456,14 @@
 .lo-input:focus, .lo-select:focus, .lo-textarea:focus { border-color: var(--accent); }
 .lo-textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
 .lo-row-form { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.lo-daterange-field { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 220px; }
+.lo-daterange-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  width: 30px;
+}
 .lo-row-form .lo-input { flex: 2; min-width: 140px; }
 .lo-row-form .lo-select { flex: 1; min-width: 110px; }
 
@@ -1109,6 +1117,25 @@
     return `<div class="lo-nav-item ${state.module===key?'active':''}" data-nav="${key}">${icon(key)}<span class="lbl">${label}</span></div>`;
   }
 
+  function formatTaskDateRange(t){
+    if(!t.dueDate) return '';
+    let str = t.dueDate + (t.dueTime ? ' ' + t.dueTime : '');
+    if(t.endDate && t.endDate !== t.dueDate){
+      str += ' → ' + t.endDate + (t.endTime ? ' ' + t.endTime : '');
+    } else if(t.endTime){
+      str += '–' + t.endTime;
+    }
+    return str;
+  }
+
+  function taskOccursOnDate(t, dateStr){
+    if(!t.dueDate) return false;
+    if(t.endDate){
+      return dateStr >= t.dueDate && dateStr <= t.endDate;
+    }
+    return dateStr === t.dueDate;
+  }
+
   function isHabitScheduled(h, dateStr){
     if(h.startDate && dateStr < h.startDate) return false;
     const rec = h.recurrence || 'daily';
@@ -1201,7 +1228,7 @@
             const scheduledHabits = state.habits.habits.filter(h=>isHabitScheduled(h, dateStr));
             const doneCount = scheduledHabits.length ? scheduledHabits.filter(h => state.habits.logs[dateStr] && state.habits.logs[dateStr][h.id]).length : 0;
             const habitDotClass = scheduledHabits.length===0 ? '' : (doneCount===scheduledHabits.length ? 'habit-full' : (doneCount>0 ? 'habit-partial' : ''));
-            const dayTasks = state.tasks.tasks.filter(t=>t.dueDate===dateStr);
+            const dayTasks = state.tasks.tasks.filter(t=>taskOccursOnDate(t, dateStr));
             const hasJournal = !!state.journal.entries[dateStr];
             return `
               <div class="lo-cal-cell ${dateStr===today?'today':''} ${dateStr===state.calSelectedDate?'selected':''}" data-cal-day="${dateStr}">
@@ -1233,7 +1260,7 @@
   function renderCalendarDayDetail(){
     const date = state.calSelectedDate;
     if(!date) return '';
-    const dayTasks = state.tasks.tasks.filter(t=>t.dueDate===date).sort((a,b)=>(a.dueTime||'').localeCompare(b.dueTime||''));
+    const dayTasks = state.tasks.tasks.filter(t=>taskOccursOnDate(t, date)).sort((a,b)=>(a.dueTime||'').localeCompare(b.dueTime||''));
     const scheduledDayHabits = state.habits.habits.filter(h=>isHabitScheduled(h, date));
     const dayHabitsDone = scheduledDayHabits.filter(h => state.habits.logs[date] && state.habits.logs[date][h.id]);
     const journalText = state.journal.entries[date];
@@ -1496,7 +1523,7 @@
             <div class="lo-task-check" data-toggle-task="${t.id}"></div>
             <div class="lo-task-text">${escapeHtml(t.text)}</div>
             <div class="lo-task-tags">
-              ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${t.dueDate}${t.dueTime ? ' '+t.dueTime : ''}</span>` : ''}
+              ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${formatTaskDateRange(t)}</span>` : ''}
               ${t.priority ? `<span class="lo-tag prio-${t.priority}">${t.priority}</span>` : ''}
               ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
             </div>
@@ -1645,16 +1672,29 @@
         <div class="lo-row-form">
           <input class="lo-input" id="new-task-text" placeholder="Jauns uzdevums..." />
           <input class="lo-input" id="new-task-project" placeholder="Projekts (nav obligāti)" style="flex:1;min-width:120px;" />
-          <input type="date" class="lo-input" id="new-task-due" style="flex:1;min-width:130px;" />
-          <div class="lo-time-picker-wrap">
-            <button type="button" class="lo-time-picker-btn" data-open-time-picker>🕐 Laiks</button>
-            <input type="hidden" id="new-task-due-time" value="" />
-          </div>
           <select class="lo-select" id="new-task-priority">
             <option value="Zema">Zema</option>
             <option value="Vidēja" selected>Vidēja</option>
             <option value="Augsta">Augsta</option>
           </select>
+        </div>
+        <div class="lo-row-form">
+          <div class="lo-daterange-field">
+            <span class="lo-daterange-label">No</span>
+            <input type="date" class="lo-input" id="new-task-due" style="flex:1;min-width:130px;" />
+            <div class="lo-time-picker-wrap">
+              <button type="button" class="lo-time-picker-btn" data-open-time-picker>🕐 Laiks</button>
+              <input type="hidden" id="new-task-due-time" value="" />
+            </div>
+          </div>
+          <div class="lo-daterange-field">
+            <span class="lo-daterange-label">Līdz</span>
+            <input type="date" class="lo-input" id="new-task-end-date" style="flex:1;min-width:130px;" title="Nav obligāti — norādi, ja notikums ilgst vairākas dienas" />
+            <div class="lo-time-picker-wrap">
+              <button type="button" class="lo-time-picker-btn" data-open-time-picker>🕐 Laiks</button>
+              <input type="hidden" id="new-task-end-time" value="" />
+            </div>
+          </div>
           <button class="lo-btn" id="add-task-btn">+ Pievienot</button>
         </div>
 
@@ -1689,11 +1729,24 @@
                   <input class="lo-input" data-edit-project="${t.id}" value="${escapeHtml(t.project||'')}" placeholder="Projekts" style="flex:1;min-width:110px;" />
                 </div>
                 <div class="lo-row-form">
-                  <input type="date" class="lo-input" data-edit-due="${t.id}" value="${t.dueDate||''}" style="flex:1;min-width:120px;" />
-                  <div class="lo-time-picker-wrap">
-                    <button type="button" class="lo-time-picker-btn" data-open-time-picker>${t.dueTime ? t.dueTime : '🕐 Laiks'}</button>
-                    <input type="hidden" data-edit-due-time="${t.id}" value="${t.dueTime||''}" />
+                  <div class="lo-daterange-field">
+                    <span class="lo-daterange-label">No</span>
+                    <input type="date" class="lo-input" data-edit-due="${t.id}" value="${t.dueDate||''}" style="flex:1;min-width:110px;" />
+                    <div class="lo-time-picker-wrap">
+                      <button type="button" class="lo-time-picker-btn" data-open-time-picker>${t.dueTime ? t.dueTime : '🕐 Laiks'}</button>
+                      <input type="hidden" data-edit-due-time="${t.id}" value="${t.dueTime||''}" />
+                    </div>
                   </div>
+                  <div class="lo-daterange-field">
+                    <span class="lo-daterange-label">Līdz</span>
+                    <input type="date" class="lo-input" data-edit-end-date="${t.id}" value="${t.endDate||''}" style="flex:1;min-width:110px;" />
+                    <div class="lo-time-picker-wrap">
+                      <button type="button" class="lo-time-picker-btn" data-open-time-picker>${t.endTime ? t.endTime : '🕐 Laiks'}</button>
+                      <input type="hidden" data-edit-end-time="${t.id}" value="${t.endTime||''}" />
+                    </div>
+                  </div>
+                </div>
+                <div class="lo-row-form">
                   <select class="lo-select" data-edit-priority="${t.id}" style="flex:0 0 110px;">
                     <option value="Zema" ${t.priority==='Zema'?'selected':''}>Zema</option>
                     <option value="Vidēja" ${t.priority==='Vidēja'?'selected':''}>Vidēja</option>
@@ -1713,7 +1766,7 @@
             <div class="lo-task-tags">
               <span class="lo-tag prio-${t.priority}">${t.priority}</span>
               ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
-              ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${t.dueDate}${t.dueTime ? ' '+t.dueTime : ''}</span>` : ''}
+              ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${formatTaskDateRange(t)}</span>` : ''}
               <button class="lo-btn ghost" data-edit-task="${t.id}" style="padding:5px 9px;font-size:11px;">✎</button>
               <button class="lo-btn danger-ghost" data-del-task="${t.id}">✕</button>
             </div>
@@ -2769,10 +2822,22 @@
         const projectInput = root.querySelector('#new-task-project');
         const dueInput = root.querySelector('#new-task-due');
         const dueTimeInput = root.querySelector('#new-task-due-time');
+        const endDateInput = root.querySelector('#new-task-end-date');
+        const endTimeInput = root.querySelector('#new-task-end-time');
         const prioSelect = root.querySelector('#new-task-priority');
         const text = textInput.value.trim();
         if(!text) return;
-        state.tasks.tasks.unshift({ id: uid(), text, project: projectInput.value.trim(), dueDate: dueInput.value || null, dueTime: dueTimeInput.value || null, priority: prioSelect.value, done: false });
+        state.tasks.tasks.unshift({
+          id: uid(),
+          text,
+          project: projectInput.value.trim(),
+          dueDate: dueInput.value || null,
+          dueTime: dueTimeInput.value || null,
+          endDate: endDateInput.value || null,
+          endTime: endTimeInput.value || null,
+          priority: prioSelect.value,
+          done: false,
+        });
         await safeSet('tasks-data', state.tasks);
         render();
       });
@@ -2813,6 +2878,8 @@
         const projectInput = root.querySelector(`[data-edit-project="${id}"]`);
         const dueInput = root.querySelector(`[data-edit-due="${id}"]`);
         const dueTimeInput = root.querySelector(`[data-edit-due-time="${id}"]`);
+        const endDateInput = root.querySelector(`[data-edit-end-date="${id}"]`);
+        const endTimeInput = root.querySelector(`[data-edit-end-time="${id}"]`);
         const prioritySelect = root.querySelector(`[data-edit-priority="${id}"]`);
         const newText = textInput.value.trim();
         if(!newText) return;
@@ -2820,6 +2887,8 @@
         t.project = projectInput.value.trim();
         t.dueDate = dueInput.value || null;
         t.dueTime = dueTimeInput.value || null;
+        t.endDate = endDateInput.value || null;
+        t.endTime = endTimeInput.value || null;
         t.priority = prioritySelect.value;
         state.editingTaskId = null;
         await safeSet('tasks-data', state.tasks);
