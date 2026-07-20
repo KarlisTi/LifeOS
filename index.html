@@ -616,7 +616,8 @@
 .lo-task-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   padding: 11px 4px;
   border-bottom: 1px solid var(--border);
 }
@@ -636,9 +637,9 @@
   display: flex; align-items: center; justify-content: center;
 }
 .lo-task-check.done { background: var(--accent); border-color: var(--accent); }
-.lo-task-text { flex: 1; font-size: 13.5px; min-width: 0; word-break: break-word; }
+.lo-task-text { flex: 1 1 140px; min-width: 140px; font-size: 13.5px; word-break: break-word; }
 .lo-task-text.done { color: var(--text-dim); text-decoration: line-through; }
-.lo-task-tags { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.lo-task-tags { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; flex-shrink: 1; }
 .lo-tag {
   font-family: 'JetBrains Mono', monospace;
   font-size: 9.5px;
