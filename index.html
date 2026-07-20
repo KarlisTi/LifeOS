@@ -100,7 +100,26 @@
   display: flex;
   flex-direction: column;
   padding: 20px 14px;
+  overflow: hidden;
+  transition: width .2s ease, padding .2s ease;
 }
+.lo-sidebar.collapsed {
+  width: 0;
+  padding: 20px 0;
+  border-right: none;
+}
+.lo-sidebar-toggle {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 6px;
+  width: 30px; height: 30px;
+  font-size: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.lo-sidebar-toggle:hover { color: var(--accent); border-color: var(--accent); }
 .lo-logo {
   font-family: 'JetBrains Mono', monospace;
   font-weight: 800;
@@ -1030,6 +1049,7 @@
     calMonth: new Date().getMonth(),
     calSelectedDate: fmtDate(new Date()),
     editingTaskId: null,
+    sidebarCollapsed: false,
     finance: { transactions: [], budgets: [] },
     financeView: 'summary',
     finVizYear: new Date().getFullYear(),
@@ -1421,7 +1441,7 @@
       return;
     }
     const sidebar = `
-      <div class="lo-sidebar">
+      <div class="lo-sidebar ${state.sidebarCollapsed ? 'collapsed' : ''}">
         <div class="lo-logo">LIFE<span>OS</span></div>
         <div class="lo-tagline">v1.0 // personīgā sistēma</div>
         ${renderPlayer()}
@@ -1447,7 +1467,10 @@
 
     const topbar = `
       <div class="lo-topbar">
-        <div class="lo-topbar-left">${moduleTitleLine()}</div>
+        <div class="lo-topbar-left" style="display:flex;align-items:center;gap:10px;">
+          <button class="lo-sidebar-toggle" id="sidebar-toggle-btn" title="Rādīt/paslēpt izvēlni">☰</button>
+          <span>${moduleTitleLine()}</span>
+        </div>
         <div class="lo-topbar-right">
           <span>${new Date().toLocaleDateString('lv-LV', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
           <span class="lo-uptime-badge">UPTIME ${uptimeDays()}D</span>
@@ -2727,6 +2750,14 @@
     if(logoutBtn){
       logoutBtn.addEventListener('click', async ()=>{
         await sb.auth.signOut();
+      });
+    }
+
+    const sidebarToggleBtn = root.querySelector('#sidebar-toggle-btn');
+    if(sidebarToggleBtn){
+      sidebarToggleBtn.addEventListener('click', ()=>{
+        state.sidebarCollapsed = !state.sidebarCollapsed;
+        render();
       });
     }
 
