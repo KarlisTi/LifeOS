@@ -496,6 +496,9 @@
   display: flex; align-items: center; justify-content: center;
 }
 .lo-icon-quickpick-btn:hover { border-color: var(--accent); }
+.lo-icon-quickpick-btn { color: var(--text-muted); }
+.lo-icon-quickpick-btn:hover { color: var(--accent); }
+.lo-task-svg-icon { display: inline-flex; vertical-align: middle; margin-right: 5px; color: var(--text-muted); }
 .lo-color-swatches { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .lo-color-swatch {
   width: 24px; height: 24px;
@@ -956,6 +959,24 @@
     '🎨','🎵','🐾','🌱','🎮','📷','⚽'
   ];
   const TASK_COLOR_PRESETS = ['#4FD1C5','#E8A33D','#E8615C','#7C9EF5','#C77DFF','#5EEAD4','#F4A261','#94A3B8'];
+  const TASK_SVG_ICONS = {
+    radiation: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2.2"/><path d="M12 4.5 L16 11 L8 11 Z"/><path d="M19.5 16.2 L12.7 13.8 L16.7 7.8 Z"/><path d="M4.5 16.2 L11.3 13.8 L7.3 7.8 Z"/></svg>',
+    biohazard: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3"/><circle cx="8" cy="15" r="3"/><circle cx="16" cy="15" r="3"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>',
+    vaultdoor: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/></svg>',
+    signal: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="19" r="1.4" fill="currentColor" stroke="none"/><path d="M8 15a6 6 0 0 1 8 0"/><path d="M4.5 11.5a11 11 0 0 1 15 0"/></svg>',
+    wrench: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2-2z"/></svg>',
+    compass: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M15 9l-2 6-6 2 2-6z" fill="currentColor" stroke="none"/></svg>',
+    flask: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2h6M10 2v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V2"/><path d="M7.5 15h9"/></svg>',
+    terminal: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 9l3 3-3 3M12 15h6"/></svg>',
+  };
+  function renderTaskIcon(iconVal){
+    if(!iconVal) return '';
+    if(iconVal.startsWith('svg:')){
+      const key = iconVal.slice(4);
+      return TASK_SVG_ICONS[key] ? `<span class="lo-task-svg-icon">${TASK_SVG_ICONS[key]}</span>` : '';
+    }
+    return escapeHtml(iconVal) + ' ';
+  }
   const HABIT_TEMPLATES = [
     { name: 'Izdzert glāzi ūdens uzreiz pēc pamošanās', area: 'Veselība', law: 'Vienkāršu' },
     { name: '10 pietupieni pirms dušas', area: 'Veselība', law: 'Sasaisti ar esošu ieradumu' },
@@ -1523,7 +1544,7 @@
                   </div>
                 </div>
                 ${dayTasks.length ? `
-                  <div class="lo-cal-task-preview">${dayTasks[0].icon ? escapeHtml(dayTasks[0].icon)+' ' : ''}${escapeHtml(truncateText(dayTasks[0].text, 12))}</div>
+                  <div class="lo-cal-task-preview">${renderTaskIcon(dayTasks[0].icon)}${escapeHtml(truncateText(dayTasks[0].text, 12))}</div>
                   ${dayTasks.length>1 ? `<div class="lo-cal-task-more">+${dayTasks.length-1} vēl</div>` : ''}
                 ` : ''}
               </div>
@@ -1552,7 +1573,7 @@
         ${dayTasks.length ? dayTasks.map(t=>`
           <div class="lo-task-item" style="${t.color ? `border-left:3px solid ${t.color};padding-left:9px;` : ''}">
             <div class="lo-task-check ${t.done?'done':''}" data-toggle-task="${t.id}">${t.done ? '✓' : ''}</div>
-            <div class="lo-task-text ${t.done?'done':''}">${t.icon ? escapeHtml(t.icon)+' ' : ''}${escapeHtml(t.text)}</div>
+            <div class="lo-task-text ${t.done?'done':''}">${renderTaskIcon(t.icon)}${escapeHtml(t.text)}</div>
             <div class="lo-task-tags">
               ${t.dueTime ? `<span class="lo-tag">${t.dueTime}</span>` : ''}
               <span class="lo-tag prio-${t.priority}">${t.priority}</span>
@@ -1815,7 +1836,7 @@
         ${topTasks.length ? topTasks.map(t=>`
           <div class="lo-task-item" style="border-bottom:1px solid var(--border);${t.color ? `border-left:3px solid ${t.color};padding-left:9px;` : ''}">
             <div class="lo-task-check" data-toggle-task="${t.id}"></div>
-            <div class="lo-task-text">${t.icon ? escapeHtml(t.icon)+' ' : ''}${escapeHtml(t.text)}</div>
+            <div class="lo-task-text">${renderTaskIcon(t.icon)}${escapeHtml(t.text)}</div>
             <div class="lo-task-tags">
               ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${formatTaskDateRange(t)}</span>` : ''}
               ${t.priority ? `<span class="lo-tag prio-${t.priority}">${t.priority}</span>` : ''}
@@ -1977,7 +1998,7 @@
 
       <div class="lo-panel">
         <div class="lo-row-form">
-          <input class="lo-input" id="new-task-icon" placeholder="🏷️" maxlength="4" style="flex:0 0 56px;text-align:center;" title="Emocijzīme (nav obligāti)" />
+          <input class="lo-input" id="new-task-icon" placeholder="🏷️" maxlength="20" style="flex:0 0 70px;text-align:center;font-size:11px;" title="Emocijzīme vai svg:atslēga" />
           <input class="lo-input" id="new-task-text" placeholder="Jauns uzdevums..." />
           <input class="lo-input" id="new-task-project" placeholder="Projekts (nav obligāti)" style="flex:1;min-width:120px;" />
           <select class="lo-select" id="new-task-priority">
@@ -1989,6 +2010,9 @@
         <div class="lo-row-form">
           <div class="lo-icon-quickpick" id="new-task-icon-quickpick">
             ${TASK_ICON_PRESETS.map(e=>`<button type="button" class="lo-icon-quickpick-btn" data-pick-icon="${e}">${e}</button>`).join('')}
+          </div>
+          <div class="lo-icon-quickpick" id="new-task-icon-svg-quickpick" title="Wasteland ikonas">
+            ${Object.entries(TASK_SVG_ICONS).map(([key,svg])=>`<button type="button" class="lo-icon-quickpick-btn" data-pick-icon-svg="${key}">${svg}</button>`).join('')}
           </div>
           <div class="lo-color-swatches" id="new-task-color-swatches" data-selected-color="">
             ${TASK_COLOR_PRESETS.map(c=>`<button type="button" class="lo-color-swatch" data-pick-color="${c}" style="background:${c};"></button>`).join('')}
@@ -2042,13 +2066,16 @@
             return `
               <div class="lo-task-edit-row">
                 <div class="lo-row-form" style="margin-bottom:8px;">
-                  <input class="lo-input" data-edit-icon="${t.id}" value="${escapeHtml(t.icon||'')}" placeholder="🏷️" maxlength="4" style="flex:0 0 56px;text-align:center;" />
+                  <input class="lo-input" data-edit-icon="${t.id}" value="${escapeHtml(t.icon||'')}" placeholder="🏷️" maxlength="20" style="flex:0 0 70px;text-align:center;font-size:11px;" />
                   <input class="lo-input" data-edit-text="${t.id}" value="${escapeHtml(t.text)}" placeholder="Uzdevums..." />
                   <input class="lo-input" data-edit-project="${t.id}" value="${escapeHtml(t.project||'')}" placeholder="Projekts" style="flex:1;min-width:110px;" />
                 </div>
                 <div class="lo-row-form" style="margin-bottom:8px;">
                   <div class="lo-icon-quickpick" data-edit-icon-quickpick="${t.id}">
                     ${TASK_ICON_PRESETS.map(e=>`<button type="button" class="lo-icon-quickpick-btn" data-pick-icon-edit="${e}">${e}</button>`).join('')}
+                  </div>
+                  <div class="lo-icon-quickpick" data-edit-icon-svg-quickpick="${t.id}" title="Wasteland ikonas">
+                    ${Object.entries(TASK_SVG_ICONS).map(([key,svg])=>`<button type="button" class="lo-icon-quickpick-btn" data-pick-icon-svg-edit="${key}">${svg}</button>`).join('')}
                   </div>
                   <div class="lo-color-swatches" data-edit-color-swatches="${t.id}" data-selected-color="${t.color||''}">
                     ${TASK_COLOR_PRESETS.map(c=>`<button type="button" class="lo-color-swatch ${t.color===c?'selected':''}" data-pick-color="${c}" style="background:${c};"></button>`).join('')}
@@ -2094,7 +2121,7 @@
             <div class="lo-task-item" ${canDrag ? `draggable="true" data-drag-task="${t._origIndex}"` : ''} style="${t.color ? `border-left:3px solid ${t.color};padding-left:9px;` : ''}">
               ${canDrag ? `<div class="lo-drag-handle">⠿</div>` : ''}
               <div class="lo-task-check ${t.done?'done':''}" data-toggle-task="${t.id}">${t.done ? '✓' : ''}</div>
-              <div class="lo-task-text ${t.done?'done':''}">${t.icon ? escapeHtml(t.icon) + ' ' : ''}${escapeHtml(t.text)}</div>
+              <div class="lo-task-text ${t.done?'done':''}">${renderTaskIcon(t.icon)}${escapeHtml(t.text)}</div>
               <div class="lo-task-tags">
                 <span class="lo-tag prio-${t.priority}">${t.priority}</span>
                 ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
@@ -3315,6 +3342,12 @@
         if(input) input.value = btn.getAttribute('data-pick-icon');
       });
     });
+    root.querySelectorAll('#new-task-icon-svg-quickpick [data-pick-icon-svg]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const input = root.querySelector('#new-task-icon');
+        if(input) input.value = 'svg:' + btn.getAttribute('data-pick-icon-svg');
+      });
+    });
     const newTaskColorSwatches = root.querySelector('#new-task-color-swatches');
     if(newTaskColorSwatches){
       newTaskColorSwatches.querySelectorAll('[data-pick-color]').forEach(btn=>{
@@ -3479,6 +3512,15 @@
         btn.addEventListener('click', ()=>{
           const input = root.querySelector(`[data-edit-icon="${id}"]`);
           if(input) input.value = btn.getAttribute('data-pick-icon-edit');
+        });
+      });
+    });
+    root.querySelectorAll('[data-edit-icon-svg-quickpick]').forEach(wrap=>{
+      const id = wrap.getAttribute('data-edit-icon-svg-quickpick');
+      wrap.querySelectorAll('[data-pick-icon-svg-edit]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const input = root.querySelector(`[data-edit-icon="${id}"]`);
+          if(input) input.value = 'svg:' + btn.getAttribute('data-pick-icon-svg-edit');
         });
       });
     });
