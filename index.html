@@ -628,6 +628,21 @@
   border-radius: 8px;
   margin: 4px 0;
 }
+.lo-task-block { border-bottom: 1px solid var(--border); }
+.lo-task-block .lo-task-item { border-bottom: none; }
+.lo-task-block:last-of-type { border-bottom: none; }
+.lo-btn.has-subtasks { color: var(--accent); border-color: rgba(79,209,197,0.3); }
+.lo-subtasks-panel {
+  padding: 4px 4px 14px 42px;
+  background: var(--bg-raised);
+  border-radius: 0 0 8px 8px;
+  margin-bottom: 4px;
+}
+.lo-subtasks-style-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+.lo-subtask-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+.lo-subtask-marker { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); width: 18px; flex-shrink: 0; text-align: right; }
+.lo-subtask-text { flex: 1; font-size: 12.5px; }
+.lo-subtask-text.done { color: var(--text-dim); text-decoration: line-through; }
 .lo-task-check {
   width: 18px; height: 18px;
   border-radius: 5px;
@@ -1051,6 +1066,7 @@
     calSelectedDate: fmtDate(new Date()),
     editingTaskId: null,
     sidebarCollapsed: false,
+    openSubtasks: {},
     finance: { transactions: [], budgets: [] },
     financeView: 'summary',
     finVizYear: new Date().getFullYear(),
@@ -1923,18 +1939,44 @@
               </div>
             `;
           }
+          const subtasks = t.subtasks || [];
+          const subDone = subtasks.filter(s=>s.done).length;
+          const subtasksOpen = !!state.openSubtasks[t.id];
           return `
-          <div class="lo-task-item" ${canDrag ? `draggable="true" data-drag-task="${t._origIndex}"` : ''} style="${t.color ? `border-left:3px solid ${t.color};padding-left:9px;` : ''}">
-            ${canDrag ? `<div class="lo-drag-handle">⠿</div>` : ''}
-            <div class="lo-task-check ${t.done?'done':''}" data-toggle-task="${t.id}">${t.done ? '✓' : ''}</div>
-            <div class="lo-task-text ${t.done?'done':''}">${t.icon ? escapeHtml(t.icon) + ' ' : ''}${escapeHtml(t.text)}</div>
-            <div class="lo-task-tags">
-              <span class="lo-tag prio-${t.priority}">${t.priority}</span>
-              ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
-              ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${formatTaskDateRange(t)}</span>` : ''}
-              <button class="lo-btn ghost" data-edit-task="${t.id}" style="padding:5px 9px;font-size:11px;">✎</button>
-              <button class="lo-btn danger-ghost" data-del-task="${t.id}">✕</button>
+          <div class="lo-task-block">
+            <div class="lo-task-item" ${canDrag ? `draggable="true" data-drag-task="${t._origIndex}"` : ''} style="${t.color ? `border-left:3px solid ${t.color};padding-left:9px;` : ''}">
+              ${canDrag ? `<div class="lo-drag-handle">⠿</div>` : ''}
+              <div class="lo-task-check ${t.done?'done':''}" data-toggle-task="${t.id}">${t.done ? '✓' : ''}</div>
+              <div class="lo-task-text ${t.done?'done':''}">${t.icon ? escapeHtml(t.icon) + ' ' : ''}${escapeHtml(t.text)}</div>
+              <div class="lo-task-tags">
+                <span class="lo-tag prio-${t.priority}">${t.priority}</span>
+                ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
+                ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${formatTaskDateRange(t)}</span>` : ''}
+                <button class="lo-btn ghost ${subtasks.length?'has-subtasks':''}" data-toggle-subtasks="${t.id}" style="padding:5px 9px;font-size:11px;" title="Apakšuzdevumi">☰${subtasks.length ? ' '+subDone+'/'+subtasks.length : ''}</button>
+                <button class="lo-btn ghost" data-edit-task="${t.id}" style="padding:5px 9px;font-size:11px;">✎</button>
+                <button class="lo-btn danger-ghost" data-del-task="${t.id}">✕</button>
+              </div>
             </div>
+            ${subtasksOpen ? `
+              <div class="lo-subtasks-panel">
+                <div class="lo-subtasks-style-toggle">
+                  <button type="button" class="lo-tab ${((t.subtaskStyle||'bulleted')==='bulleted')?'active':''}" data-set-subtask-style="${t.id}|bulleted">• Nenumurēts</button>
+                  <button type="button" class="lo-tab ${(t.subtaskStyle==='numbered')?'active':''}" data-set-subtask-style="${t.id}|numbered">1. Numurēts</button>
+                </div>
+                ${subtasks.length ? subtasks.map((s, si)=>`
+                  <div class="lo-subtask-row">
+                    <span class="lo-subtask-marker">${(t.subtaskStyle==='numbered') ? (si+1)+'.' : '•'}</span>
+                    <div class="lo-task-check ${s.done?'done':''}" data-toggle-subtask="${t.id}|${s.id}">${s.done ? '✓' : ''}</div>
+                    <div class="lo-subtask-text ${s.done?'done':''}">${escapeHtml(s.text)}</div>
+                    <button class="lo-btn danger-ghost" data-del-subtask="${t.id}|${s.id}">✕</button>
+                  </div>
+                `).join('') : `<div class="lo-empty" style="padding:6px 0;">Vēl nav apakšuzdevumu.</div>`}
+                <div class="lo-row-form" style="margin-top:8px;margin-bottom:0;">
+                  <input class="lo-input" data-new-subtask-input="${t.id}" placeholder="Jauns apakšuzdevums..." style="font-size:12.5px;" />
+                  <button class="lo-btn ghost" data-add-subtask="${t.id}">+ Pievienot</button>
+                </div>
+              </div>
+            ` : ''}
           </div>
           `;
         }).join('') : `<div class="lo-empty">Nekā šeit. Tīrs saraksts.</div>`}
@@ -3067,6 +3109,65 @@
       el.addEventListener('click', async ()=>{
         const id = el.getAttribute('data-del-task');
         state.tasks.tasks = state.tasks.tasks.filter(t=>t.id!==id);
+        await safeSet('tasks-data', state.tasks);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-toggle-subtasks]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const id = el.getAttribute('data-toggle-subtasks');
+        state.openSubtasks[id] = !state.openSubtasks[id];
+        render();
+      });
+    });
+    root.querySelectorAll('[data-set-subtask-style]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [taskId, style] = el.getAttribute('data-set-subtask-style').split('|');
+        const t = state.tasks.tasks.find(t=>t.id===taskId);
+        if(t){
+          t.subtaskStyle = style;
+          await safeSet('tasks-data', state.tasks);
+          render();
+        }
+      });
+    });
+    root.querySelectorAll('[data-add-subtask]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const taskId = el.getAttribute('data-add-subtask');
+        const input = root.querySelector(`[data-new-subtask-input="${taskId}"]`);
+        const text = input.value.trim();
+        if(!text) return;
+        const t = state.tasks.tasks.find(t=>t.id===taskId);
+        if(!t.subtasks) t.subtasks = [];
+        t.subtasks.push({ id: uid(), text, done: false });
+        await safeSet('tasks-data', state.tasks);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-new-subtask-input]').forEach(input=>{
+      input.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter'){
+          const taskId = input.getAttribute('data-new-subtask-input');
+          const btn = root.querySelector(`[data-add-subtask="${taskId}"]`);
+          if(btn) btn.click();
+        }
+      });
+    });
+    root.querySelectorAll('[data-toggle-subtask]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [taskId, subId] = el.getAttribute('data-toggle-subtask').split('|');
+        const t = state.tasks.tasks.find(t=>t.id===taskId);
+        const s = t.subtasks.find(s=>s.id===subId);
+        s.done = !s.done;
+        await safeSet('tasks-data', state.tasks);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-del-subtask]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [taskId, subId] = el.getAttribute('data-del-subtask').split('|');
+        const t = state.tasks.tasks.find(t=>t.id===taskId);
+        t.subtasks = t.subtasks.filter(s=>s.id!==subId);
         await safeSet('tasks-data', state.tasks);
         render();
       });
