@@ -812,6 +812,40 @@
 .lo-cal-dot.journal { width: 6px; height: 6px; border-radius: 1px; background: transparent; border: 1.5px solid var(--accent); }
 .lo-cal-legend { display: flex; gap: 16px; margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--text-dim); flex-wrap: wrap; }
 .lo-cal-legend-item { display: flex; align-items: center; gap: 6px; }
+
+/* ---- Week view ---- */
+.lo-week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.lo-week-day-col {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+  cursor: pointer;
+}
+.lo-week-day-col:hover { border-color: var(--text-dim); }
+.lo-week-day-col.today { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(79,209,197,0.25); }
+.lo-week-day-header { text-align: center; margin-bottom: 8px; }
+.lo-week-day-name { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; }
+.lo-week-day-num { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--text); }
+.lo-week-day-col.today .lo-week-day-num { color: var(--accent); }
+.lo-week-day-body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.lo-week-task-chip {
+  font-size: 10px;
+  background: var(--bg-panel);
+  border-radius: 4px;
+  padding: 3px 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lo-week-more { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); text-align: center; }
+.lo-week-day-footer { display: flex; justify-content: center; gap: 6px; margin-top: 8px; font-size: 9.5px; font-family: 'JetBrains Mono', monospace; color: var(--text-dim); }
+@media (max-width: 900px) {
+  .lo-week-grid { grid-template-columns: repeat(7, minmax(70px, 1fr)); overflow-x: auto; }
+}
 .lo-cal-cell.selected { border-color: var(--warn); box-shadow: 0 0 0 1px rgba(232,163,61,0.3); }
 .lo-cal-detail { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
 .lo-cal-detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -1067,6 +1101,8 @@
     editingTaskId: null,
     sidebarCollapsed: false,
     openSubtasks: {},
+    calendarView: 'month',
+    calWeekStart: null,
     finance: { transactions: [], budgets: [] },
     financeView: 'summary',
     finVizYear: new Date().getFullYear(),
@@ -1332,6 +1368,7 @@
       return t.dueDate.slice(0,7) === key || (t.endDate && t.endDate.slice(0,7) === key);
     });
     const monthJournalCount = Object.keys(state.journal.entries).filter(d=>d.slice(0,7) === `${state.calYear}-${String(state.calMonth+1).padStart(2,'0')}`).length;
+    const view = state.calendarView || 'month';
 
     return `
       <div class="lo-module-title">Kalendārs</div>
@@ -1343,7 +1380,99 @@
         <div class="lo-card"><div class="lo-card-label">Aktīvie ieradumi</div><div class="lo-card-value warn">${state.habits.habits.length}</div></div>
       </div>
 
-      ${renderCalendar()}
+      <div class="lo-tabs" style="margin-bottom:16px;">
+        <div class="lo-tab ${view==='month'?'active':''}" data-cal-view="month">Mēnesis</div>
+        <div class="lo-tab ${view==='week'?'active':''}" data-cal-view="week">Nedēļa</div>
+        <div class="lo-tab ${view==='day'?'active':''}" data-cal-view="day">Diena</div>
+      </div>
+
+      ${view==='month' ? renderCalendar() : ''}
+      ${view==='week' ? renderWeekView() : ''}
+      ${view==='day' ? renderDayView() : ''}
+    `;
+  }
+
+  function getMondayOf(dateStr){
+    const d = new Date(dateStr+'T00:00:00');
+    const dow = d.getDay();
+    const diff = dow===0 ? -6 : 1-dow;
+    d.setDate(d.getDate()+diff);
+    return fmtDate(d);
+  }
+
+  function renderWeekView(){
+    if(!state.calWeekStart) state.calWeekStart = getMondayOf(todayStr());
+    const monday = state.calWeekStart;
+    const days = [];
+    for(let i=0;i<7;i++){
+      const d = new Date(monday+'T00:00:00');
+      d.setDate(d.getDate()+i);
+      days.push(fmtDate(d));
+    }
+    const today = todayStr();
+    const weekEnd = days[6];
+    const rangeLabel = `${new Date(monday+'T00:00:00').toLocaleDateString('lv-LV',{day:'numeric',month:'short'})} – ${new Date(weekEnd+'T00:00:00').toLocaleDateString('lv-LV',{day:'numeric',month:'short'})}`;
+
+    return `
+      <div class="lo-panel">
+        <div class="lo-cal-header">
+          <div class="lo-cal-month-label">${rangeLabel}</div>
+          <div class="lo-cal-nav">
+            <button class="lo-cal-nav-btn" id="week-prev">‹</button>
+            <button class="lo-cal-today-btn" id="week-today">Šodien</button>
+            <button class="lo-cal-nav-btn" id="week-next">›</button>
+          </div>
+        </div>
+        <div class="lo-week-grid">
+          ${days.map(d=>{
+            const dayTasks = state.tasks.tasks.filter(t=>taskOccursOnDate(t, d));
+            const scheduledHabits = state.habits.habits.filter(h=>isHabitScheduled(h, d));
+            const doneHabits = scheduledHabits.filter(h=>state.habits.logs[d] && state.habits.logs[d][h.id]);
+            const hasJournal = !!state.journal.entries[d];
+            const dowLabel = new Date(d+'T00:00:00').toLocaleDateString('lv-LV',{weekday:'short'});
+            const dayNum = parseInt(d.slice(8,10),10);
+            return `
+              <div class="lo-week-day-col ${d===today?'today':''}" data-week-day="${d}">
+                <div class="lo-week-day-header">
+                  <div class="lo-week-day-name">${dowLabel}</div>
+                  <div class="lo-week-day-num">${dayNum}</div>
+                </div>
+                <div class="lo-week-day-body">
+                  ${dayTasks.slice(0,4).map(t=>`
+                    <div class="lo-week-task-chip" style="${t.color?`border-left:2px solid ${t.color};`:''}">${t.icon?escapeHtml(t.icon)+' ':''}${t.dueTime?t.dueTime+' ':''}${escapeHtml(truncateText(t.text,16))}</div>
+                  `).join('')}
+                  ${dayTasks.length>4 ? `<div class="lo-week-more">+${dayTasks.length-4} vēl</div>` : ''}
+                </div>
+                <div class="lo-week-day-footer">
+                  ${scheduledHabits.length ? `<span class="lo-week-habit-badge">${doneHabits.length}/${scheduledHabits.length} 🔁</span>` : ''}
+                  ${hasJournal ? `<span class="lo-week-journal-badge">📓</span>` : ''}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderDayView(){
+    const date = state.calSelectedDate || todayStr();
+    const dateLabel = new Date(date+'T00:00:00').toLocaleDateString('lv-LV', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    return `
+      <div class="lo-panel">
+        <div class="lo-cal-header">
+          <div class="lo-cal-month-label">${dateLabel}</div>
+          <div class="lo-cal-nav">
+            <button class="lo-cal-nav-btn" id="day-prev">‹</button>
+            <button class="lo-cal-today-btn" id="day-today">Šodien</button>
+            <button class="lo-cal-nav-btn" id="day-next">›</button>
+          </div>
+        </div>
+      </div>
+      <div class="lo-panel">
+        ${renderDaySections(date)}
+      </div>
     `;
   }
 
@@ -1400,13 +1529,48 @@
     `;
   }
 
-  function renderCalendarDayDetail(){
-    const date = state.calSelectedDate;
-    if(!date) return '';
+  function renderDaySections(date){
     const dayTasks = state.tasks.tasks.filter(t=>taskOccursOnDate(t, date)).sort((a,b)=>(a.dueTime||'').localeCompare(b.dueTime||''));
     const scheduledDayHabits = state.habits.habits.filter(h=>isHabitScheduled(h, date));
     const dayHabitsDone = scheduledDayHabits.filter(h => state.habits.logs[date] && state.habits.logs[date][h.id]);
     const journalText = state.journal.entries[date];
+
+    return `
+      <div class="lo-cal-detail-section">
+        <div class="lo-cal-detail-label">${icon('tasks')} Uzdevumi (${dayTasks.length})</div>
+        ${dayTasks.length ? dayTasks.map(t=>`
+          <div class="lo-task-item" style="${t.color ? `border-left:3px solid ${t.color};padding-left:9px;` : ''}">
+            <div class="lo-task-check ${t.done?'done':''}" data-toggle-task="${t.id}">${t.done ? '✓' : ''}</div>
+            <div class="lo-task-text ${t.done?'done':''}">${t.icon ? escapeHtml(t.icon)+' ' : ''}${escapeHtml(t.text)}</div>
+            <div class="lo-task-tags">
+              ${t.dueTime ? `<span class="lo-tag">${t.dueTime}</span>` : ''}
+              <span class="lo-tag prio-${t.priority}">${t.priority}</span>
+            </div>
+          </div>
+        `).join('') : `<div class="lo-empty" style="padding:8px 0;">Šai dienai nav uzdevumu.</div>`}
+      </div>
+
+      <div class="lo-cal-detail-section">
+        <div class="lo-cal-detail-label">${icon('habits')} Izpildītie ieradumi (${dayHabitsDone.length}/${scheduledDayHabits.length})</div>
+        ${dayHabitsDone.length ? dayHabitsDone.map(h=>`
+          <div class="lo-proc-row">
+            <div class="lo-proc-dot on"></div>
+            <div class="lo-proc-name">${escapeHtml(h.name)}</div>
+          </div>
+        `).join('') : `<div class="lo-empty" style="padding:8px 0;">Šai dienai nav izpildītu ieradumu.</div>`}
+      </div>
+
+      <div class="lo-cal-detail-section">
+        <div class="lo-cal-detail-label">${icon('journal')} Dienasgrāmata</div>
+        ${journalText ? `<div class="lo-journal-preview-box">${escapeHtml(journalText)}</div>` : `<div class="lo-empty" style="padding:8px 0;">Šai dienai nav ieraksta.</div>`}
+        <button class="lo-btn ghost" data-open-journal-from-cal="${date}">Atvērt dienasgrāmatu</button>
+      </div>
+    `;
+  }
+
+  function renderCalendarDayDetail(){
+    const date = state.calSelectedDate;
+    if(!date) return '';
     const dateLabel = new Date(date+'T00:00:00').toLocaleDateString('lv-LV', { weekday: 'long', day: 'numeric', month: 'long' });
 
     return `
@@ -1415,36 +1579,7 @@
           <div class="lo-cal-detail-date">${dateLabel}</div>
           <button class="lo-btn ghost" id="cal-detail-close">Aizvērt</button>
         </div>
-
-        <div class="lo-cal-detail-section">
-          <div class="lo-cal-detail-label">${icon('tasks')} Uzdevumi (${dayTasks.length})</div>
-          ${dayTasks.length ? dayTasks.map(t=>`
-            <div class="lo-task-item" style="${t.color ? `border-left:3px solid ${t.color};padding-left:9px;` : ''}">
-              <div class="lo-task-check ${t.done?'done':''}" data-toggle-task="${t.id}">${t.done ? '✓' : ''}</div>
-              <div class="lo-task-text ${t.done?'done':''}">${t.icon ? escapeHtml(t.icon)+' ' : ''}${escapeHtml(t.text)}</div>
-              <div class="lo-task-tags">
-                ${t.dueTime ? `<span class="lo-tag">${t.dueTime}</span>` : ''}
-                <span class="lo-tag prio-${t.priority}">${t.priority}</span>
-              </div>
-            </div>
-          `).join('') : `<div class="lo-empty" style="padding:8px 0;">Šai dienai nav uzdevumu.</div>`}
-        </div>
-
-        <div class="lo-cal-detail-section">
-          <div class="lo-cal-detail-label">${icon('habits')} Izpildītie ieradumi (${dayHabitsDone.length}/${scheduledDayHabits.length})</div>
-          ${dayHabitsDone.length ? dayHabitsDone.map(h=>`
-            <div class="lo-proc-row">
-              <div class="lo-proc-dot on"></div>
-              <div class="lo-proc-name">${escapeHtml(h.name)}</div>
-            </div>
-          `).join('') : `<div class="lo-empty" style="padding:8px 0;">Šai dienai nav izpildītu ieradumu.</div>`}
-        </div>
-
-        <div class="lo-cal-detail-section">
-          <div class="lo-cal-detail-label">${icon('journal')} Dienasgrāmata</div>
-          ${journalText ? `<div class="lo-journal-preview-box">${escapeHtml(journalText)}</div>` : `<div class="lo-empty" style="padding:8px 0;">Šai dienai nav ieraksta.</div>`}
-          <button class="lo-btn ghost" data-open-journal-from-cal="${date}">Atvērt dienasgrāmatu</button>
-        </div>
+        ${renderDaySections(date)}
       </div>
     `;
   }
@@ -2901,6 +3036,69 @@
     });
 
     // Calendar
+    root.querySelectorAll('[data-cal-view]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        state.calendarView = el.getAttribute('data-cal-view');
+        render();
+      });
+    });
+    const weekPrev = root.querySelector('#week-prev');
+    if(weekPrev){
+      weekPrev.addEventListener('click', ()=>{
+        const d = new Date((state.calWeekStart || getMondayOf(todayStr())) + 'T00:00:00');
+        d.setDate(d.getDate()-7);
+        state.calWeekStart = fmtDate(d);
+        render();
+      });
+    }
+    const weekNext = root.querySelector('#week-next');
+    if(weekNext){
+      weekNext.addEventListener('click', ()=>{
+        const d = new Date((state.calWeekStart || getMondayOf(todayStr())) + 'T00:00:00');
+        d.setDate(d.getDate()+7);
+        state.calWeekStart = fmtDate(d);
+        render();
+      });
+    }
+    const weekToday = root.querySelector('#week-today');
+    if(weekToday){
+      weekToday.addEventListener('click', ()=>{
+        state.calWeekStart = getMondayOf(todayStr());
+        render();
+      });
+    }
+    root.querySelectorAll('[data-week-day]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        state.calSelectedDate = el.getAttribute('data-week-day');
+        state.calendarView = 'day';
+        render();
+      });
+    });
+    const dayPrev = root.querySelector('#day-prev');
+    if(dayPrev){
+      dayPrev.addEventListener('click', ()=>{
+        const d = new Date((state.calSelectedDate || todayStr()) + 'T00:00:00');
+        d.setDate(d.getDate()-1);
+        state.calSelectedDate = fmtDate(d);
+        render();
+      });
+    }
+    const dayNext = root.querySelector('#day-next');
+    if(dayNext){
+      dayNext.addEventListener('click', ()=>{
+        const d = new Date((state.calSelectedDate || todayStr()) + 'T00:00:00');
+        d.setDate(d.getDate()+1);
+        state.calSelectedDate = fmtDate(d);
+        render();
+      });
+    }
+    const dayToday = root.querySelector('#day-today');
+    if(dayToday){
+      dayToday.addEventListener('click', ()=>{
+        state.calSelectedDate = todayStr();
+        render();
+      });
+    }
     const calPrev = root.querySelector('#cal-prev');
     if(calPrev){
       calPrev.addEventListener('click', ()=>{
