@@ -643,6 +643,16 @@
 .lo-subtask-marker { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); width: 18px; flex-shrink: 0; text-align: right; }
 .lo-subtask-text { flex: 1; font-size: 12.5px; }
 .lo-subtask-text.done { color: var(--text-dim); text-decoration: line-through; }
+
+.lo-task-notes-panel { padding: 12px 12px 14px 42px; background: var(--bg-raised); border-radius: 0 0 8px 8px; margin-bottom: 4px; }
+.lo-task-notes-preview { font-size: 12.5px; line-height: 1.6; margin-bottom: 10px; }
+.lo-task-notes-preview .lo-md-list { margin: 4px 0; padding-left: 20px; }
+.lo-task-notes-preview .lo-md-list li { margin-bottom: 2px; }
+.lo-md-checklist-item { display: flex; align-items: flex-start; gap: 7px; margin-bottom: 3px; }
+.lo-md-checkbox { cursor: pointer; flex-shrink: 0; color: var(--accent); }
+.lo-task-notes-textarea { font-size: 12.5px; min-height: 90px; margin-bottom: 8px; }
+.lo-task-notes-hint { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-dim); margin-bottom: 8px; line-height: 1.6; }
+.lo-task-notes-hint code { background: var(--bg-panel); padding: 1px 4px; border-radius: 3px; }
 .lo-task-check {
   width: 18px; height: 18px;
   border-radius: 5px;
@@ -1101,6 +1111,7 @@
     editingTaskId: null,
     sidebarCollapsed: false,
     openSubtasks: {},
+    openTaskNotes: {},
     calendarView: 'month',
     calWeekStart: null,
     finance: { transactions: [], budgets: [] },
@@ -2077,6 +2088,7 @@
           const subtasks = t.subtasks || [];
           const subDone = subtasks.filter(s=>s.done).length;
           const subtasksOpen = !!state.openSubtasks[t.id];
+          const notesOpen = !!state.openTaskNotes[t.id];
           return `
           <div class="lo-task-block">
             <div class="lo-task-item" ${canDrag ? `draggable="true" data-drag-task="${t._origIndex}"` : ''} style="${t.color ? `border-left:3px solid ${t.color};padding-left:9px;` : ''}">
@@ -2088,6 +2100,7 @@
                 ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
                 ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${formatTaskDateRange(t)}</span>` : ''}
                 <button class="lo-btn ghost ${subtasks.length?'has-subtasks':''}" data-toggle-subtasks="${t.id}" style="padding:5px 9px;font-size:11px;" title="Apakšuzdevumi">☰${subtasks.length ? ' '+subDone+'/'+subtasks.length : ''}</button>
+                <button class="lo-btn ghost ${t.notes?'has-subtasks':''}" data-toggle-task-notes="${t.id}" style="padding:5px 9px;font-size:11px;" title="Piezīmes">📝</button>
                 <button class="lo-btn ghost" data-edit-task="${t.id}" style="padding:5px 9px;font-size:11px;">✎</button>
                 <button class="lo-btn danger-ghost" data-del-task="${t.id}">✕</button>
               </div>
@@ -2110,6 +2123,14 @@
                   <input class="lo-input" data-new-subtask-input="${t.id}" placeholder="Jauns apakšuzdevums..." style="font-size:12.5px;" />
                   <button class="lo-btn ghost" data-add-subtask="${t.id}">+ Pievienot</button>
                 </div>
+              </div>
+            ` : ''}
+            ${notesOpen ? `
+              <div class="lo-task-notes-panel">
+                <div class="lo-task-notes-preview">${renderTaskNotesMarkdown(t.notes, t.id)}</div>
+                <textarea class="lo-textarea lo-task-notes-textarea" data-task-notes-input="${t.id}" placeholder="Raksti brīvi... piemēram:&#10;- vienums sarakstā&#10;1. numurēts vienums&#10;- [ ] atzīmējams darāmais&#10;**treknraksts** *slīpraksts*">${escapeHtml(t.notes||'')}</textarea>
+                <div class="lo-task-notes-hint">Sintakse: <code>- vienums</code> · <code>1. vienums</code> · <code>- [ ] atzīmējams</code> · <code>**trekns**</code> · <code>*slīps*</code></div>
+                <button class="lo-btn ghost" data-save-task-notes="${t.id}">Saglabāt piezīmes</button>
               </div>
             ` : ''}
           </div>
@@ -2896,6 +2917,45 @@
     setTimeout(()=>{ document.addEventListener('mousedown', outsideHandler); }, 0);
   }
 
+  function inlineMdFormat(s){
+    return s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
+  }
+
+  function renderTaskNotesMarkdown(text, taskId){
+    if(!text) return `<div class="lo-empty" style="padding:6px 0;">Vēl nav piezīmju.</div>`;
+    const rawLines = text.split('\n');
+    let html = '';
+    let inUl = false, inOl = false;
+    function closeLists(){
+      if(inUl){ html += '</ul>'; inUl = false; }
+      if(inOl){ html += '</ol>'; inOl = false; }
+    }
+    rawLines.forEach((rawLine, idx)=>{
+      const escLine = escapeHtml(rawLine);
+      const checklistMatch = escLine.match(/^[-*]\s+\[( |x|X)\]\s+(.*)$/);
+      const ulMatch = escLine.match(/^[-*]\s+(.*)$/);
+      const olMatch = escLine.match(/^\d+\.\s+(.*)$/);
+      if(checklistMatch){
+        closeLists();
+        const checked = checklistMatch[1].toLowerCase() === 'x';
+        html += `<div class="lo-md-checklist-item"><span class="lo-md-checkbox" data-toggle-note-checkbox="${taskId}|${idx}">${checked?'☑':'☐'}</span><span style="${checked?'text-decoration:line-through;color:var(--text-dim);':''}">${inlineMdFormat(checklistMatch[2])}</span></div>`;
+      } else if(ulMatch){
+        if(inOl){ html += '</ol>'; inOl = false; }
+        if(!inUl){ html += '<ul class="lo-md-list">'; inUl = true; }
+        html += `<li>${inlineMdFormat(ulMatch[1])}</li>`;
+      } else if(olMatch){
+        if(inUl){ html += '</ul>'; inUl = false; }
+        if(!inOl){ html += '<ol class="lo-md-list">'; inOl = true; }
+        html += `<li>${inlineMdFormat(olMatch[1])}</li>`;
+      } else {
+        closeLists();
+        html += rawLine.trim()==='' ? '<div style="height:6px;"></div>' : `<div>${inlineMdFormat(escLine)}</div>`;
+      }
+    });
+    closeLists();
+    return html;
+  }
+
   function escapeHtml(str){
     const d = document.createElement('div');
     d.textContent = str;
@@ -3315,6 +3375,37 @@
       el.addEventListener('click', ()=>{
         const id = el.getAttribute('data-toggle-subtasks');
         state.openSubtasks[id] = !state.openSubtasks[id];
+        render();
+      });
+    });
+    root.querySelectorAll('[data-toggle-task-notes]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const id = el.getAttribute('data-toggle-task-notes');
+        state.openTaskNotes[id] = !state.openTaskNotes[id];
+        render();
+      });
+    });
+    root.querySelectorAll('[data-save-task-notes]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-save-task-notes');
+        const textarea = root.querySelector(`[data-task-notes-input="${id}"]`);
+        const t = state.tasks.tasks.find(t=>t.id===id);
+        t.notes = textarea.value;
+        await safeSet('tasks-data', state.tasks);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-toggle-note-checkbox]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [taskId, idxStr] = el.getAttribute('data-toggle-note-checkbox').split('|');
+        const idx = parseInt(idxStr, 10);
+        const t = state.tasks.tasks.find(t=>t.id===taskId);
+        const lines = (t.notes || '').split('\n');
+        const line = lines[idx] || '';
+        if(/\[ \]/.test(line)) lines[idx] = line.replace('[ ]', '[x]');
+        else if(/\[x\]/i.test(line)) lines[idx] = line.replace(/\[x\]/i, '[ ]');
+        t.notes = lines.join('\n');
+        await safeSet('tasks-data', state.tasks);
         render();
       });
     });
