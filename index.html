@@ -656,6 +656,9 @@
 .lo-task-notes-textarea { font-size: 12.5px; min-height: 90px; margin-bottom: 8px; }
 .lo-task-notes-hint { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-dim); margin-bottom: 8px; line-height: 1.6; }
 .lo-task-notes-hint code { background: var(--bg-panel); padding: 1px 4px; border-radius: 3px; }
+.lo-task-image-panel { padding: 12px 12px 14px 42px; background: var(--bg-raised); border-radius: 0 0 8px 8px; margin-bottom: 4px; }
+.lo-task-image-preview { max-width: 100%; max-height: 260px; border-radius: 8px; display: block; }
+.lo-task-image-hint { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--text-dim); margin-top: 8px; line-height: 1.6; }
 .lo-task-check {
   width: 18px; height: 18px;
   border-radius: 5px;
@@ -1133,6 +1136,7 @@
     sidebarCollapsed: false,
     openSubtasks: {},
     openTaskNotes: {},
+    openTaskImage: {},
     calendarView: 'month',
     calWeekStart: null,
     finance: { transactions: [], budgets: [] },
@@ -2116,6 +2120,7 @@
           const subDone = subtasks.filter(s=>s.done).length;
           const subtasksOpen = !!state.openSubtasks[t.id];
           const notesOpen = !!state.openTaskNotes[t.id];
+          const imageOpen = !!state.openTaskImage[t.id];
           return `
           <div class="lo-task-block">
             <div class="lo-task-item" ${canDrag ? `draggable="true" data-drag-task="${t._origIndex}"` : ''} style="${t.color ? `border-left:3px solid ${t.color};padding-left:9px;` : ''}">
@@ -2128,6 +2133,7 @@
                 ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${formatTaskDateRange(t)}</span>` : ''}
                 <button class="lo-btn ghost ${subtasks.length?'has-subtasks':''}" data-toggle-subtasks="${t.id}" style="padding:5px 9px;font-size:11px;" title="Apakšuzdevumi">☰${subtasks.length ? ' '+subDone+'/'+subtasks.length : ''}</button>
                 <button class="lo-btn ghost ${t.notes?'has-subtasks':''}" data-toggle-task-notes="${t.id}" style="padding:5px 9px;font-size:11px;" title="Piezīmes">📝</button>
+                <button class="lo-btn ghost ${t.imagePath?'has-subtasks':''}" data-toggle-task-image="${t.id}" style="padding:5px 9px;font-size:11px;" title="Attēls">🖼️</button>
                 <button class="lo-btn ghost" data-edit-task="${t.id}" style="padding:5px 9px;font-size:11px;">✎</button>
                 <button class="lo-btn danger-ghost" data-del-task="${t.id}">✕</button>
               </div>
@@ -2158,6 +2164,17 @@
                 <textarea class="lo-textarea lo-task-notes-textarea" data-task-notes-input="${t.id}" placeholder="Raksti brīvi... piemēram:&#10;- vienums sarakstā&#10;1. numurēts vienums&#10;- [ ] atzīmējams darāmais&#10;**treknraksts** *slīpraksts*">${escapeHtml(t.notes||'')}</textarea>
                 <div class="lo-task-notes-hint">Sintakse: <code>- vienums</code> · <code>1. vienums</code> · <code>- [ ] atzīmējams</code> · <code>**trekns**</code> · <code>*slīps*</code></div>
                 <button class="lo-btn ghost" data-save-task-notes="${t.id}">Saglabāt piezīmes</button>
+              </div>
+            ` : ''}
+            ${imageOpen ? `
+              <div class="lo-task-image-panel">
+                ${t.imagePath ? `
+                  <img src="${SUPABASE_URL}/storage/v1/object/public/task-images/${t.imagePath}" class="lo-task-image-preview" alt="Uzdevuma attēls" />
+                  <button class="lo-btn danger-ghost" data-remove-task-image="${t.id}" style="margin-top:8px;">Noņemt attēlu</button>
+                ` : `
+                  <input type="file" accept="image/*" class="lo-input" data-task-image-input="${t.id}" />
+                  <div class="lo-task-image-hint">Augšupielādē attēlu no telefona/datora, vai nosūti to Telegram botam ar šī uzdevuma nosaukumu ziņā.</div>
+                `}
               </div>
             ` : ''}
           </div>
@@ -3415,6 +3432,47 @@
       el.addEventListener('click', ()=>{
         const id = el.getAttribute('data-toggle-task-notes');
         state.openTaskNotes[id] = !state.openTaskNotes[id];
+        render();
+      });
+    });
+    root.querySelectorAll('[data-toggle-task-image]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const id = el.getAttribute('data-toggle-task-image');
+        state.openTaskImage[id] = !state.openTaskImage[id];
+        render();
+      });
+    });
+    root.querySelectorAll('[data-task-image-input]').forEach(input=>{
+      input.addEventListener('change', async (e)=>{
+        const taskId = input.getAttribute('data-task-image-input');
+        const file = e.target.files[0];
+        if(!file) return;
+        if(file.size > 8*1024*1024){
+          alert('Fails ir pārāk liels (maks. ~8MB).');
+          return;
+        }
+        if(!state.session){ return; }
+        const path = `${state.session.user.id}/${uid()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g,'_')}`;
+        const { error } = await sb.storage.from('task-images').upload(path, file);
+        if(error){
+          alert('Neizdevās augšupielādēt attēlu: ' + error.message);
+          return;
+        }
+        const t = state.tasks.tasks.find(t=>t.id===taskId);
+        t.imagePath = path;
+        await safeSet('tasks-data', state.tasks);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-remove-task-image]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const taskId = el.getAttribute('data-remove-task-image');
+        const t = state.tasks.tasks.find(t=>t.id===taskId);
+        if(t.imagePath){
+          await sb.storage.from('task-images').remove([t.imagePath]);
+        }
+        t.imagePath = null;
+        await safeSet('tasks-data', state.tasks);
         render();
       });
     });
