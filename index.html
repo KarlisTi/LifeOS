@@ -735,6 +735,9 @@
 .lo-topic-notes-btn:hover { opacity: 1; border-color: var(--border); }
 .lo-topic-notes-btn.has-notes { opacity: 1; }
 .lo-topic-notes-editor { padding: 0 0 12px 34px; }
+.lo-note-block { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 8px; background: var(--bg-raised); }
+.lo-note-block-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.lo-note-block-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
 .lo-code-textarea {
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
@@ -2313,20 +2316,32 @@
 
           ${tr.topics.length ? tr.topics.map(top=>{
             const topicNotesOpen = !!state.openTopicNotes[top.id];
+            const notesBlocks = top.notesBlocks || (top.details ? [{ id: 'legacy', content: top.details }] : []);
             return `
             <div class="lo-topic-block">
               <div class="lo-topic-row">
                 <div class="lo-task-check ${top.done?'done':''}" data-toggle-topic="${tr.id}|${top.id}">${top.done?'✓':''}</div>
                 <div class="lo-topic-text ${top.done?'done':''}">${escapeHtml(top.text)}</div>
-                <button class="lo-topic-notes-btn ${top.details ? 'has-notes':''}" data-toggle-topic-notes="${top.id}" title="Piezīmes / sintakse">📝</button>
+                <button class="lo-topic-notes-btn ${notesBlocks.length ? 'has-notes':''}" data-toggle-topic-notes="${top.id}" title="Piezīmes / sintakse">📝${notesBlocks.length ? ' '+notesBlocks.length : ''}</button>
                 <button class="lo-btn danger-ghost" data-del-topic="${tr.id}|${top.id}">✕</button>
               </div>
               ${top.exercise ? `<div class="lo-topic-exercise">💡 ${escapeHtml(top.exercise)}</div>` : ''}
               ${topicNotesOpen ? `
-                <div class="lo-topic-notes-editor">
-                  ${top.details ? `<pre class="lo-code-preview" data-code-preview="${top.id}"><code>${escapeHtml(top.details)}</code></pre>` : ''}
-                  <textarea class="lo-textarea lo-code-textarea" data-topic-details="${tr.id}|${top.id}" placeholder="Piezīmes, skaidrojumi, koda / sintakses piemēri...">${escapeHtml(top.details||'')}</textarea>
-                  <button class="lo-btn ghost" data-save-topic-details="${tr.id}|${top.id}" style="margin-top:6px;">Saglabāt</button>
+                <div class="lo-topic-notes-editor" data-notes-topic="${tr.id}|${top.id}">
+                  ${notesBlocks.map((block, bi)=>`
+                    <div class="lo-note-block">
+                      <div class="lo-note-block-header">
+                        <span class="lo-note-block-label">Piezīme ${bi+1}</span>
+                        <button class="lo-btn danger-ghost" data-del-note-block="${tr.id}|${top.id}|${block.id}">✕</button>
+                      </div>
+                      ${block.content ? `<pre class="lo-code-preview" data-code-preview="${top.id}-${block.id}"><code>${escapeHtml(block.content)}</code></pre>` : ''}
+                      <textarea class="lo-textarea lo-code-textarea" data-note-block-input="${block.id}" placeholder="Piezīmes, skaidrojumi, koda / sintakses piemēri...">${escapeHtml(block.content||'')}</textarea>
+                    </div>
+                  `).join('')}
+                  <div class="lo-row-form" style="margin-top:6px;margin-bottom:0;">
+                    <button class="lo-btn ghost" data-add-note-block="${tr.id}|${top.id}">+ Pievienot piezīmju lauciņu</button>
+                    <button class="lo-btn" data-save-topic-details="${tr.id}|${top.id}">Saglabāt visas piezīmes</button>
+                  </div>
                 </div>
               ` : ''}
             </div>
@@ -3845,8 +3860,37 @@
         const [trackId, topicId] = el.getAttribute('data-save-topic-details').split('|');
         const track = state.learning.tracks.find(t=>t.id===trackId);
         const topic = track.topics.find(t=>t.id===topicId);
-        const textarea = root.querySelector(`[data-topic-details="${trackId}|${topicId}"]`);
-        topic.details = textarea.value;
+        const container = root.querySelector(`[data-notes-topic="${trackId}|${topicId}"]`);
+        const blocks = [];
+        container.querySelectorAll('[data-note-block-input]').forEach(ta=>{
+          blocks.push({ id: ta.getAttribute('data-note-block-input'), content: ta.value });
+        });
+        topic.notesBlocks = blocks;
+        delete topic.details;
+        await safeSet('learning-data', state.learning);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-add-note-block]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [trackId, topicId] = el.getAttribute('data-add-note-block').split('|');
+        const track = state.learning.tracks.find(t=>t.id===trackId);
+        const topic = track.topics.find(t=>t.id===topicId);
+        if(!topic.notesBlocks){
+          topic.notesBlocks = topic.details ? [{ id: uid(), content: topic.details }] : [];
+          delete topic.details;
+        }
+        topic.notesBlocks.push({ id: uid(), content: '' });
+        await safeSet('learning-data', state.learning);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-del-note-block]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [trackId, topicId, blockId] = el.getAttribute('data-del-note-block').split('|');
+        const track = state.learning.tracks.find(t=>t.id===trackId);
+        const topic = track.topics.find(t=>t.id===topicId);
+        topic.notesBlocks = (topic.notesBlocks || []).filter(b=>b.id !== blockId);
         await safeSet('learning-data', state.learning);
         render();
       });
