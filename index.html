@@ -1161,6 +1161,7 @@
     openSubtasks: {},
     openTaskNotes: {},
     openTaskImage: {},
+    editingNoteBlock: {},
     calendarView: 'month',
     calWeekStart: null,
     finance: { transactions: [], budgets: [] },
@@ -2328,16 +2329,21 @@
               ${top.exercise ? `<div class="lo-topic-exercise">💡 ${escapeHtml(top.exercise)}</div>` : ''}
               ${topicNotesOpen ? `
                 <div class="lo-topic-notes-editor" data-notes-topic="${tr.id}|${top.id}">
-                  ${notesBlocks.map((block, bi)=>`
+                  ${notesBlocks.map((block, bi)=>{
+                    const isEditing = !!state.editingNoteBlock[block.id] || !block.content;
+                    return `
                     <div class="lo-note-block">
                       <div class="lo-note-block-header">
                         <span class="lo-note-block-label">Piezīme ${bi+1}</span>
-                        <button class="lo-btn danger-ghost" data-del-note-block="${tr.id}|${top.id}|${block.id}">✕</button>
+                        <div style="display:flex;gap:6px;">
+                          ${!isEditing ? `<button class="lo-btn ghost" data-edit-note-block="${block.id}" style="padding:4px 8px;font-size:10.5px;">Rediģēt</button>` : ''}
+                          <button class="lo-btn danger-ghost" data-del-note-block="${tr.id}|${top.id}|${block.id}">✕</button>
+                        </div>
                       </div>
-                      ${block.content ? `<pre class="lo-code-preview" data-code-preview="${top.id}-${block.id}"><code>${escapeHtml(block.content)}</code></pre>` : ''}
-                      <textarea class="lo-textarea lo-code-textarea" data-note-block-input="${block.id}" placeholder="Piezīmes, skaidrojumi, koda / sintakses piemēri...">${escapeHtml(block.content||'')}</textarea>
+                      ${!isEditing ? `<pre class="lo-code-preview" data-code-preview="${top.id}-${block.id}"><code>${escapeHtml(block.content)}</code></pre>` : ''}
+                      <textarea class="lo-textarea lo-code-textarea" data-note-block-input="${block.id}" style="${isEditing ? '' : 'display:none;'}" placeholder="Piezīmes, skaidrojumi, koda / sintakses piemēri...">${escapeHtml(block.content||'')}</textarea>
                     </div>
-                  `).join('')}
+                  `;}).join('')}
                   <div class="lo-row-form" style="margin-top:6px;margin-bottom:0;">
                     <button class="lo-btn ghost" data-add-note-block="${tr.id}|${top.id}">+ Pievienot piezīmju lauciņu</button>
                     <button class="lo-btn" data-save-topic-details="${tr.id}|${top.id}">Saglabāt visas piezīmes</button>
@@ -3863,11 +3869,20 @@
         const container = root.querySelector(`[data-notes-topic="${trackId}|${topicId}"]`);
         const blocks = [];
         container.querySelectorAll('[data-note-block-input]').forEach(ta=>{
-          blocks.push({ id: ta.getAttribute('data-note-block-input'), content: ta.value });
+          const blockId = ta.getAttribute('data-note-block-input');
+          blocks.push({ id: blockId, content: ta.value });
+          delete state.editingNoteBlock[blockId];
         });
         topic.notesBlocks = blocks;
         delete topic.details;
         await safeSet('learning-data', state.learning);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-edit-note-block]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const blockId = el.getAttribute('data-edit-note-block');
+        state.editingNoteBlock[blockId] = true;
         render();
       });
     });
@@ -3880,7 +3895,9 @@
           topic.notesBlocks = topic.details ? [{ id: uid(), content: topic.details }] : [];
           delete topic.details;
         }
-        topic.notesBlocks.push({ id: uid(), content: '' });
+        const newBlock = { id: uid(), content: '' };
+        topic.notesBlocks.push(newBlock);
+        state.editingNoteBlock[newBlock.id] = true;
         await safeSet('learning-data', state.learning);
         render();
       });
