@@ -742,6 +742,20 @@
   min-height: 90px;
   white-space: pre;
 }
+.lo-code-preview {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  background: #1e1e1e;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.lo-code-preview code { background: none; padding: 0; }
 .lo-topic-text { flex: 1; font-size: 13px; }
 .lo-topic-text.done { color: var(--text-dim); text-decoration: line-through; }
 .lo-topic-add-row { display: flex; gap: 8px; margin-top: 8px; }
@@ -1200,6 +1214,21 @@
     const script = document.createElement('script');
     script.id = 'lifeos-chartjs';
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js';
+    script.onload = cb;
+    document.head.appendChild(script);
+  }
+
+  function loadHighlightJs(cb){
+    if(window.hljs){ cb(); return; }
+    const existing = document.getElementById('lifeos-hljs');
+    if(existing){ existing.addEventListener('load', cb); return; }
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css';
+    document.head.appendChild(css);
+    const script = document.createElement('script');
+    script.id = 'lifeos-hljs';
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js';
     script.onload = cb;
     document.head.appendChild(script);
   }
@@ -2287,6 +2316,7 @@
               </div>
               ${topicNotesOpen ? `
                 <div class="lo-topic-notes-editor">
+                  ${top.details ? `<pre class="lo-code-preview" data-code-preview="${top.id}"><code>${escapeHtml(top.details)}</code></pre>` : ''}
                   <textarea class="lo-textarea lo-code-textarea" data-topic-details="${tr.id}|${top.id}" placeholder="Piezīmes, skaidrojumi, koda / sintakses piemēri...">${escapeHtml(top.details||'')}</textarea>
                   <button class="lo-btn ghost" data-save-topic-details="${tr.id}|${top.id}" style="margin-top:6px;">Saglabāt</button>
                 </div>
@@ -3919,6 +3949,16 @@
     }
     if(state.module==='habits'){
       loadChartJs(()=>{ mountHabitsChart(); });
+    }
+    if(state.module==='learning'){
+      const codeBlocks = root.querySelectorAll('[data-code-preview] code');
+      if(codeBlocks.length){
+        loadHighlightJs(()=>{
+          root.querySelectorAll('[data-code-preview] code').forEach(block=>{
+            window.hljs.highlightElement(block);
+          });
+        });
+      }
     }
 
     // Health
