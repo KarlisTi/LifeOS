@@ -883,6 +883,37 @@
   white-space: nowrap;
 }
 .lo-week-more { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); text-align: center; }
+
+/* ---- Habit month table ---- */
+.lo-habit-month-table-wrap { overflow-x: auto; }
+.lo-habit-month-table { border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+.lo-habit-month-table th, .lo-habit-month-table td { padding: 0; text-align: center; }
+.lo-habit-month-table thead th { color: var(--text-dim); font-weight: 400; padding-bottom: 6px; min-width: 22px; }
+.lo-habit-month-name-col {
+  text-align: left !important;
+  padding-right: 12px !important;
+  min-width: 140px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: var(--text);
+  position: sticky;
+  left: 0;
+  background: var(--bg-panel);
+}
+.lo-habit-month-cell {
+  width: 22px; height: 22px;
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+}
+.lo-habit-month-cell[data-toggle-month-cell] { cursor: pointer; }
+.lo-habit-month-cell[data-toggle-month-cell]:hover { border-color: var(--accent); }
+.lo-habit-month-cell.done { background: var(--accent); border-color: var(--accent); }
+.lo-habit-month-cell.not-scheduled { background: transparent; border-color: transparent; }
+.lo-habit-month-cell.is-today { box-shadow: inset 0 0 0 1px var(--warn); }
 .lo-week-day-footer { display: flex; justify-content: center; gap: 6px; margin-top: 8px; font-size: 9.5px; font-family: 'JetBrains Mono', monospace; color: var(--text-dim); }
 @media (max-width: 900px) {
   .lo-week-grid { grid-template-columns: repeat(7, minmax(70px, 1fr)); overflow-x: auto; }
@@ -1163,6 +1194,8 @@
     openTaskNotes: {},
     openTaskImage: {},
     editingNoteBlock: {},
+    habitsTableYear: new Date().getFullYear(),
+    habitsTableMonth: new Date().getMonth(),
     calendarView: 'month',
     calWeekStart: null,
     finance: { transactions: [], budgets: [] },
@@ -1917,8 +1950,66 @@
   }
 
   // ---------------- HABITS ----------------
+  function currentWeekMonToSun(){
+    const monday = getMondayOf(todayStr());
+    const arr = [];
+    for(let i=0;i<7;i++){
+      const d = new Date(monday+'T00:00:00');
+      d.setDate(d.getDate()+i);
+      arr.push(fmtDate(d));
+    }
+    return arr;
+  }
+  function renderHabitsMonthTable(){
+    const habits = state.habits.habits;
+    if(!habits.length) return '';
+    const year = state.habitsTableYear;
+    const month = state.habitsTableMonth;
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const monthLabel = new Date(year, month, 1).toLocaleDateString('lv-LV', { month: 'long', year: 'numeric' });
+    const today = todayStr();
+
+    return `
+      <div class="lo-panel">
+        <div class="lo-cal-header">
+          <div class="lo-cal-month-label">${icon('habits')} Mēneša tabula — ${monthLabel}</div>
+          <div class="lo-cal-nav">
+            <button class="lo-cal-nav-btn" id="habits-table-prev">‹</button>
+            <button class="lo-cal-today-btn" id="habits-table-today">Šodien</button>
+            <button class="lo-cal-nav-btn" id="habits-table-next">›</button>
+          </div>
+        </div>
+        <div class="lo-habit-month-table-wrap">
+          <table class="lo-habit-month-table">
+            <thead>
+              <tr>
+                <th class="lo-habit-month-name-col">Ieradums</th>
+                ${Array.from({length: daysInMonth}, (_, i)=>`<th>${i+1}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${habits.map(h=>`
+                <tr>
+                  <td class="lo-habit-month-name-col">${escapeHtml(h.name)}</td>
+                  ${Array.from({length: daysInMonth}, (_, i)=>{
+                    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`;
+                    const scheduled = isHabitScheduled(h, dateStr);
+                    const done = !!(scheduled && state.habits.logs[dateStr] && state.habits.logs[dateStr][h.id]);
+                    const isFuture = dateStr > today;
+                    const clickable = scheduled && !isFuture;
+                    return `<td class="lo-habit-month-cell ${!scheduled?'not-scheduled':''} ${done?'done':''} ${dateStr===today?'is-today':''}" ${clickable ? `data-toggle-month-cell="${h.id}|${dateStr}"` : ''}></td>`;
+                  }).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
   function renderHabits(){
-    const week = last7Days();
+    const week = currentWeekMonToSun();
     const habits = state.habits.habits;
     return `
       <div class="lo-module-title">Ieradumi</div>
@@ -1930,6 +2021,8 @@
           <div class="lo-chart-wrap"><canvas id="habits-chart"></canvas></div>
         </div>
       ` : ''}
+
+      ${renderHabitsMonthTable()}
 
       <div class="lo-templates-toggle" id="templates-toggle">${state.showTemplates ? '▾' : '▸'} IETEIKTIE IERADUMI (Atomic Habits)</div>
       ${state.showTemplates ? `
@@ -3396,6 +3489,40 @@
         render();
       });
     });
+    root.querySelectorAll('[data-toggle-month-cell]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [habitId, date] = el.getAttribute('data-toggle-month-cell').split('|');
+        if(!state.habits.logs[date]) state.habits.logs[date] = {};
+        state.habits.logs[date][habitId] = !state.habits.logs[date][habitId];
+        await safeSet('habits-data', state.habits);
+        render();
+      });
+    });
+    const habitsTablePrev = root.querySelector('#habits-table-prev');
+    if(habitsTablePrev){
+      habitsTablePrev.addEventListener('click', ()=>{
+        state.habitsTableMonth--;
+        if(state.habitsTableMonth < 0){ state.habitsTableMonth = 11; state.habitsTableYear--; }
+        render();
+      });
+    }
+    const habitsTableNext = root.querySelector('#habits-table-next');
+    if(habitsTableNext){
+      habitsTableNext.addEventListener('click', ()=>{
+        state.habitsTableMonth++;
+        if(state.habitsTableMonth > 11){ state.habitsTableMonth = 0; state.habitsTableYear++; }
+        render();
+      });
+    }
+    const habitsTableToday = root.querySelector('#habits-table-today');
+    if(habitsTableToday){
+      habitsTableToday.addEventListener('click', ()=>{
+        const now = new Date();
+        state.habitsTableYear = now.getFullYear();
+        state.habitsTableMonth = now.getMonth();
+        render();
+      });
+    }
     let dragSrcHabitIndex = null;
     root.querySelectorAll('[data-drag-habit]').forEach(el=>{
       el.addEventListener('dragstart', (e)=>{
