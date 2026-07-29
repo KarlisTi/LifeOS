@@ -2040,6 +2040,16 @@
               <input type="hidden" id="new-task-end-time" value="" />
             </div>
           </div>
+          <select class="lo-select" id="new-task-reminder" style="flex:0 0 160px;" title="Kad atgādināt Telegram">
+            <option value="15" selected>🔔 15 min iepriekš</option>
+            <option value="0">🔔 Termiņa brīdī</option>
+            <option value="5">🔔 5 min iepriekš</option>
+            <option value="30">🔔 30 min iepriekš</option>
+            <option value="60">🔔 1 stundu iepriekš</option>
+            <option value="180">🔔 3 stundas iepriekš</option>
+            <option value="1440">🔔 1 dienu iepriekš</option>
+            <option value="none">Bez atgādinājuma</option>
+          </select>
           <button class="lo-btn" id="add-task-btn">+ Pievienot</button>
         </div>
 
@@ -2109,6 +2119,13 @@
                     <option value="Zema" ${t.priority==='Zema'?'selected':''}>Zema</option>
                     <option value="Vidēja" ${t.priority==='Vidēja'?'selected':''}>Vidēja</option>
                     <option value="Augsta" ${t.priority==='Augsta'?'selected':''}>Augsta</option>
+                  </select>
+                  <select class="lo-select" data-edit-reminder="${t.id}" style="flex:0 0 160px;" title="Kad atgādināt Telegram">
+                    ${(()=>{
+                      const rv = t.reminderMinutesBefore === null ? 'none' : (t.reminderMinutesBefore !== undefined ? String(t.reminderMinutesBefore) : '15');
+                      const opts = [['15','🔔 15 min iepriekš'],['0','🔔 Termiņa brīdī'],['5','🔔 5 min iepriekš'],['30','🔔 30 min iepriekš'],['60','🔔 1 stundu iepriekš'],['180','🔔 3 stundas iepriekš'],['1440','🔔 1 dienu iepriekš'],['none','Bez atgādinājuma']];
+                      return opts.map(([val,label])=>`<option value="${val}" ${rv===val?'selected':''}>${label}</option>`).join('');
+                    })()}
                   </select>
                   <button class="lo-btn" data-save-edit-task="${t.id}">Saglabāt</button>
                   <button class="lo-btn ghost" data-cancel-edit-task="${t.id}">Atcelt</button>
@@ -3387,8 +3404,10 @@
         const endTimeInput = root.querySelector('#new-task-end-time');
         const prioSelect = root.querySelector('#new-task-priority');
         const colorSwatches = root.querySelector('#new-task-color-swatches');
+        const reminderSelect = root.querySelector('#new-task-reminder');
         const text = textInput.value.trim();
         if(!text) return;
+        const reminderRaw = reminderSelect ? reminderSelect.value : '15';
         state.tasks.tasks.unshift({
           id: uid(),
           text,
@@ -3400,6 +3419,7 @@
           endDate: endDateInput.value || null,
           endTime: endTimeInput.value || null,
           priority: prioSelect.value,
+          reminderMinutesBefore: reminderRaw === 'none' ? null : parseInt(reminderRaw, 10),
           done: false,
         });
         await safeSet('tasks-data', state.tasks);
@@ -3605,6 +3625,7 @@
         const endDateInput = root.querySelector(`[data-edit-end-date="${id}"]`);
         const endTimeInput = root.querySelector(`[data-edit-end-time="${id}"]`);
         const prioritySelect = root.querySelector(`[data-edit-priority="${id}"]`);
+        const reminderSelect = root.querySelector(`[data-edit-reminder="${id}"]`);
         const newText = textInput.value.trim();
         if(!newText) return;
         t.text = newText;
@@ -3616,6 +3637,10 @@
         t.endDate = endDateInput.value || null;
         t.endTime = endTimeInput.value || null;
         t.priority = prioritySelect.value;
+        if(reminderSelect){
+          const reminderRaw = reminderSelect.value;
+          t.reminderMinutesBefore = reminderRaw === 'none' ? null : parseInt(reminderRaw, 10);
+        }
         state.editingTaskId = null;
         await safeSet('tasks-data', state.tasks);
         render();
