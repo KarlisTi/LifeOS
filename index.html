@@ -2831,9 +2831,10 @@
       <div class="lo-panel">
         <div class="lo-panel-title">${icon('journal')} Iepriekšējie ieraksti</div>
         ${entries.length ? entries.map(([date, text])=>`
-          <div class="lo-journal-entry ${date===state.journalDate?'active':''}" data-open-journal="${date}">
+          <div class="lo-journal-entry ${date===state.journalDate?'active':''}">
             <div class="lo-journal-date">${date}${date===state.journalDate?' · rediģē tagad':''}</div>
             <div class="lo-journal-preview">${escapeHtml(text)}</div>
+            <button class="lo-btn ghost" data-open-journal="${date}" style="margin-top:8px;font-size:11px;padding:6px 10px;">✎ Rediģēt</button>
           </div>
         `).join('') : `<div class="lo-empty">Vēl nav ierakstu.</div>`}
       </div>
