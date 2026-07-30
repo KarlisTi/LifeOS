@@ -2363,50 +2363,79 @@
   }
 
   // ---------------- GOALS ----------------
+  function goalFinanceSaved(g){
+    if(!g.financeCategory) return 0;
+    return state.finance.transactions
+      .filter(t=>t.type==='income' && t.category === g.financeCategory)
+      .reduce((sum,t)=>sum+t.amount, 0);
+  }
+
   function renderGoals(){
     const tracks = state.learning.tracks;
     return `
       <div class="lo-module-title">Mērķi</div>
-      <div class="lo-module-sub">Ilgtermiņa virzieni pa dzīves jomām. Var piesaistīt Mācīšanās sekojumam automātiskam progresam.</div>
+      <div class="lo-module-sub">Ilgtermiņa virzieni pa dzīves jomām. Var piesaistīt Mācīšanās sekojumam vai finanšu uzkrājumam automātiskam progresam.</div>
 
       <div class="lo-panel">
         <div class="lo-row-form">
-          <input class="lo-input" id="new-goal-text" placeholder="Jauns mērķis (piem., Iemācīties Python)" />
+          <input class="lo-input" id="new-goal-text" placeholder="Jauns mērķis (piem., Iemācīties Python, Sakrāt ceļojumam)" />
           <select class="lo-select" id="new-goal-area">
             ${AREAS.map(a=>`<option value="${a}">${a}</option>`).join('')}
           </select>
         </div>
         <div class="lo-row-form">
-          <select class="lo-select" id="new-goal-link-track" title="Piesaistīt Mācīšanās sekojumam (nav obligāti)">
-            <option value="">Bez piesaistes (manuāls progress)</option>
-            ${tracks.map(t=>`<option value="${t.id}">🔗 ${escapeHtml(t.name)}</option>`).join('')}
+          <select class="lo-select" id="new-goal-link-type" title="Piesaistes veids">
+            <option value="">Bez piesaistes (manuāls progress %)</option>
+            <option value="learning">🔗 Mācīšanās sekojums</option>
+            <option value="finance">💰 Finanšu uzkrājums</option>
           </select>
+        </div>
+        <div class="lo-row-form" id="new-goal-learning-fields" style="display:none;">
+          <select class="lo-select" id="new-goal-link-track">
+            ${tracks.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="lo-row-form" id="new-goal-finance-fields" style="display:none;">
+          <input class="lo-input" id="new-goal-finance-category" list="tx-category-list" placeholder="Kategorija (piem., Ceļojums)" />
+          <input class="lo-input" id="new-goal-finance-target" type="number" step="1" min="1" placeholder="Mērķa summa (€)" />
+        </div>
+        <div class="lo-row-form">
           <button class="lo-btn" id="add-goal-btn">+ Pievienot</button>
         </div>
 
         ${state.goals.goals.length ? state.goals.goals.map(g=>{
           const linkedTrack = g.linkedTrackId ? tracks.find(t=>t.id===g.linkedTrackId) : null;
-          const displayProgress = linkedTrack ? trackProgress(linkedTrack) : (g.progress || 0);
+          const isFinanceLinked = !!g.financeCategory;
+          const savedAmount = isFinanceLinked ? goalFinanceSaved(g) : 0;
+          let displayProgress;
+          if(linkedTrack) displayProgress = trackProgress(linkedTrack);
+          else if(isFinanceLinked) displayProgress = g.financeTarget > 0 ? Math.min(100, Math.round((savedAmount / g.financeTarget) * 100)) : 0;
+          else displayProgress = g.progress || 0;
+
           return `
           <div class="lo-goal-item">
             <div class="lo-goal-top">
               <div class="lo-goal-text">${escapeHtml(g.text)}</div>
               <div style="display:flex;align-items:center;gap:8px;">
                 ${linkedTrack ? `<span class="lo-goal-link-tag">🔗 ${escapeHtml(linkedTrack.name)}</span>` : ''}
+                ${isFinanceLinked ? `<span class="lo-goal-link-tag">💰 ${escapeHtml(g.financeCategory)}</span>` : ''}
                 <div class="lo-goal-area-tag">${g.area}</div>
               </div>
             </div>
             <div class="lo-progress-track"><div class="lo-progress-fill" style="width:${displayProgress}%"></div></div>
             <div class="lo-goal-controls">
               ${linkedTrack ? `
-                <div class="lo-goal-pct" style="flex:1;text-align:left;">Automātisks progress no "${escapeHtml(linkedTrack.name)}"</div>
+                <div class="lo-goal-pct" style="flex:1;text-align:left;">Automātisks progress no "${escapeHtml(linkedTrack.name)}" (${displayProgress}%)</div>
+                <button class="lo-btn ghost" data-unlink-goal="${g.id}">Atsaistīt</button>
+              ` : isFinanceLinked ? `
+                <div class="lo-goal-pct" style="flex:1;text-align:left;">€${savedAmount.toFixed(2)} / €${g.financeTarget.toFixed(2)} (${displayProgress}%)</div>
                 <button class="lo-btn ghost" data-unlink-goal="${g.id}">Atsaistīt</button>
               ` : `
                 <input type="range" min="0" max="100" value="${g.progress||0}" data-goal-range="${g.id}" />
                 <div class="lo-goal-pct">${displayProgress}%</div>
                 ${tracks.length ? `
                   <select class="lo-select" data-link-goal="${g.id}" style="flex:0 0 140px;font-size:11px;">
-                    <option value="">Piesaistīt...</option>
+                    <option value="">Piesaistīt mācībām...</option>
                     ${tracks.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}
                   </select>
                 ` : ''}
@@ -3929,15 +3958,39 @@
     });
 
     // Goals
+    const goalLinkTypeSelect = root.querySelector('#new-goal-link-type');
+    if(goalLinkTypeSelect){
+      goalLinkTypeSelect.addEventListener('change', ()=>{
+        const learningFields = root.querySelector('#new-goal-learning-fields');
+        const financeFields = root.querySelector('#new-goal-finance-fields');
+        if(learningFields) learningFields.style.display = goalLinkTypeSelect.value === 'learning' ? 'flex' : 'none';
+        if(financeFields) financeFields.style.display = goalLinkTypeSelect.value === 'finance' ? 'flex' : 'none';
+      });
+    }
     const addGoalBtn = root.querySelector('#add-goal-btn');
     if(addGoalBtn){
       addGoalBtn.addEventListener('click', async ()=>{
         const textInput = root.querySelector('#new-goal-text');
         const areaSelect = root.querySelector('#new-goal-area');
-        const linkSelect = root.querySelector('#new-goal-link-track');
+        const linkTypeSelect = root.querySelector('#new-goal-link-type');
         const text = textInput.value.trim();
         if(!text) return;
-        state.goals.goals.push({ id: uid(), text, area: areaSelect.value, progress: 0, linkedTrackId: (linkSelect && linkSelect.value) || null });
+        const newGoal = { id: uid(), text, area: areaSelect.value, progress: 0, linkedTrackId: null, financeCategory: null, financeTarget: 0 };
+        const linkType = linkTypeSelect ? linkTypeSelect.value : '';
+        if(linkType === 'learning'){
+          const trackSelect = root.querySelector('#new-goal-link-track');
+          newGoal.linkedTrackId = trackSelect ? trackSelect.value : null;
+        } else if(linkType === 'finance'){
+          const categoryInput = root.querySelector('#new-goal-finance-category');
+          const targetInput = root.querySelector('#new-goal-finance-target');
+          const category = categoryInput ? categoryInput.value.trim() : '';
+          const target = targetInput ? parseFloat(targetInput.value) : 0;
+          if(category && target > 0){
+            newGoal.financeCategory = category;
+            newGoal.financeTarget = target;
+          }
+        }
+        state.goals.goals.push(newGoal);
         await safeSet('goals-data', state.goals);
         render();
       });
@@ -3957,6 +4010,8 @@
         const id = el.getAttribute('data-unlink-goal');
         const g = state.goals.goals.find(g=>g.id===id);
         g.linkedTrackId = null;
+        g.financeCategory = null;
+        g.financeTarget = 0;
         await safeSet('goals-data', state.goals);
         render();
       });
