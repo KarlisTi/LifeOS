@@ -690,6 +690,14 @@
 .lo-goal-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 8px; }
 .lo-goal-text { font-size: 13.5px; font-weight: 600; }
 .lo-goal-area-tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); }
+.lo-goal-link-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--warn);
+  background: var(--warn-dim);
+  padding: 3px 8px;
+  border-radius: 5px;
+}
 .lo-progress-track { background: var(--bg-raised); height: 7px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
 .lo-progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .2s; }
 .lo-goal-controls { display: flex; align-items: center; gap: 8px; }
@@ -2356,33 +2364,57 @@
 
   // ---------------- GOALS ----------------
   function renderGoals(){
+    const tracks = state.learning.tracks;
     return `
       <div class="lo-module-title">Mērķi</div>
-      <div class="lo-module-sub">Ilgtermiņa virzieni pa dzīves jomām.</div>
+      <div class="lo-module-sub">Ilgtermiņa virzieni pa dzīves jomām. Var piesaistīt Mācīšanās sekojumam automātiskam progresam.</div>
 
       <div class="lo-panel">
         <div class="lo-row-form">
-          <input class="lo-input" id="new-goal-text" placeholder="Jauns mērķis (piem., Noskriet 10km)" />
+          <input class="lo-input" id="new-goal-text" placeholder="Jauns mērķis (piem., Iemācīties Python)" />
           <select class="lo-select" id="new-goal-area">
             ${AREAS.map(a=>`<option value="${a}">${a}</option>`).join('')}
+          </select>
+        </div>
+        <div class="lo-row-form">
+          <select class="lo-select" id="new-goal-link-track" title="Piesaistīt Mācīšanās sekojumam (nav obligāti)">
+            <option value="">Bez piesaistes (manuāls progress)</option>
+            ${tracks.map(t=>`<option value="${t.id}">🔗 ${escapeHtml(t.name)}</option>`).join('')}
           </select>
           <button class="lo-btn" id="add-goal-btn">+ Pievienot</button>
         </div>
 
-        ${state.goals.goals.length ? state.goals.goals.map(g=>`
+        ${state.goals.goals.length ? state.goals.goals.map(g=>{
+          const linkedTrack = g.linkedTrackId ? tracks.find(t=>t.id===g.linkedTrackId) : null;
+          const displayProgress = linkedTrack ? trackProgress(linkedTrack) : (g.progress || 0);
+          return `
           <div class="lo-goal-item">
             <div class="lo-goal-top">
               <div class="lo-goal-text">${escapeHtml(g.text)}</div>
-              <div class="lo-goal-area-tag">${g.area}</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                ${linkedTrack ? `<span class="lo-goal-link-tag">🔗 ${escapeHtml(linkedTrack.name)}</span>` : ''}
+                <div class="lo-goal-area-tag">${g.area}</div>
+              </div>
             </div>
-            <div class="lo-progress-track"><div class="lo-progress-fill" style="width:${g.progress}%"></div></div>
+            <div class="lo-progress-track"><div class="lo-progress-fill" style="width:${displayProgress}%"></div></div>
             <div class="lo-goal-controls">
-              <input type="range" min="0" max="100" value="${g.progress}" data-goal-range="${g.id}" />
-              <div class="lo-goal-pct">${g.progress}%</div>
+              ${linkedTrack ? `
+                <div class="lo-goal-pct" style="flex:1;text-align:left;">Automātisks progress no "${escapeHtml(linkedTrack.name)}"</div>
+                <button class="lo-btn ghost" data-unlink-goal="${g.id}">Atsaistīt</button>
+              ` : `
+                <input type="range" min="0" max="100" value="${g.progress||0}" data-goal-range="${g.id}" />
+                <div class="lo-goal-pct">${displayProgress}%</div>
+                ${tracks.length ? `
+                  <select class="lo-select" data-link-goal="${g.id}" style="flex:0 0 140px;font-size:11px;">
+                    <option value="">Piesaistīt...</option>
+                    ${tracks.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}
+                  </select>
+                ` : ''}
+              `}
               <button class="lo-btn danger-ghost" data-del-goal="${g.id}">✕</button>
             </div>
           </div>
-        `).join('') : `<div class="lo-empty">Nav vēl neviena mērķa. Ko vēlies sasniegt?</div>`}
+        `;}).join('') : `<div class="lo-empty">Nav vēl neviena mērķa. Ko vēlies sasniegt?</div>`}
       </div>
     `;
   }
@@ -3902,13 +3934,33 @@
       addGoalBtn.addEventListener('click', async ()=>{
         const textInput = root.querySelector('#new-goal-text');
         const areaSelect = root.querySelector('#new-goal-area');
+        const linkSelect = root.querySelector('#new-goal-link-track');
         const text = textInput.value.trim();
         if(!text) return;
-        state.goals.goals.push({ id: uid(), text, area: areaSelect.value, progress: 0 });
+        state.goals.goals.push({ id: uid(), text, area: areaSelect.value, progress: 0, linkedTrackId: (linkSelect && linkSelect.value) || null });
         await safeSet('goals-data', state.goals);
         render();
       });
     }
+    root.querySelectorAll('[data-link-goal]').forEach(el=>{
+      el.addEventListener('change', async ()=>{
+        const id = el.getAttribute('data-link-goal');
+        if(!el.value) return;
+        const g = state.goals.goals.find(g=>g.id===id);
+        g.linkedTrackId = el.value;
+        await safeSet('goals-data', state.goals);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-unlink-goal]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-unlink-goal');
+        const g = state.goals.goals.find(g=>g.id===id);
+        g.linkedTrackId = null;
+        await safeSet('goals-data', state.goals);
+        render();
+      });
+    });
     root.querySelectorAll('[data-goal-range]').forEach(el=>{
       el.addEventListener('input', ()=>{
         const id = el.getAttribute('data-goal-range');
