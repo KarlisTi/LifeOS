@@ -3331,7 +3331,7 @@
           const result = await res.json();
           state.googleSyncing = false;
           if(result.ok){
-            alert(`Sinhronizēti ${result.synced} uzdevumi ar Google Tasks!`);
+            alert(`Sinhronizācija pabeigta!\n+ Izveidoti Google Tasks: ${result.created}\n↻ Atjaunināti: ${result.updated}\n↓ Atvesti no Google Tasks: ${result.pulled}`);
           } else {
             alert('Sinhronizācija neizdevās: ' + (result.error || 'nezināma kļūda'));
           }
