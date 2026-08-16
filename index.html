@@ -2873,7 +2873,7 @@
     return state.health[planKey];
   }
 
-  function renderWeeklyPlan(planKey, title, placeholder, withSetsReps){
+  function renderWeeklyPlan(planKey, title, placeholder, fieldMode){
     const plan = ensurePlan(planKey);
     return `
       <div class="lo-panel">
@@ -2884,15 +2884,19 @@
               <div class="lo-plan-day-header">${PLAN_DAY_NAMES[i]}</div>
               ${plan[d].length ? plan[d].map(item=>`
                 <div class="lo-plan-item">
-                  <span>${escapeHtml(item.text)}${(item.sets || item.reps) ? ` <span class="lo-plan-setsreps">${item.sets||'?'}×${item.reps||'?'}</span>` : ''}</span>
+                  <span>${escapeHtml(item.text)}${(item.sets || item.reps) ? ` <span class="lo-plan-setsreps">${item.sets||'?'}×${item.reps||'?'}</span>` : ''}${(item.quantity || item.grams) ? ` <span class="lo-plan-setsreps">${item.quantity ? escapeHtml(item.quantity) : ''}${item.quantity && item.grams ? ' · ' : ''}${item.grams ? item.grams+'g' : ''}</span>` : ''}</span>
                   <button class="lo-btn danger-ghost" data-del-plan-item="${planKey}|${d}|${item.id}">✕</button>
                 </div>
               `).join('') : `<div class="lo-plan-empty">—</div>`}
               <div class="lo-plan-add-row">
                 <input class="lo-input" data-plan-input="${planKey}|${d}" placeholder="${placeholder}" />
-                ${withSetsReps ? `
+                ${fieldMode==='setsreps' ? `
                   <input class="lo-input lo-plan-sets-input" type="number" min="1" data-plan-sets-input="${planKey}|${d}" placeholder="Seti" />
                   <input class="lo-input lo-plan-reps-input" type="number" min="1" data-plan-reps-input="${planKey}|${d}" placeholder="Reizes" />
+                ` : ''}
+                ${fieldMode==='quantitygrams' ? `
+                  <input class="lo-input lo-plan-sets-input" data-plan-quantity-input="${planKey}|${d}" placeholder="Daudzums" style="flex:1 1 60px;" />
+                  <input class="lo-input lo-plan-reps-input" type="number" min="1" data-plan-grams-input="${planKey}|${d}" placeholder="Grami" />
                 ` : ''}
                 <button class="lo-btn ghost" data-add-plan-item="${planKey}|${d}">+</button>
               </div>
@@ -2911,8 +2915,8 @@
       <div class="lo-module-title">Veselība un sports</div>
       <div class="lo-module-sub">Miega, treniņu, pulsa un uztura uzskaite — ievadi datus pats vai no Garmin / Samsung Health.</div>
 
-      ${renderWeeklyPlan('trainingPlan', '🏋️ Nedēļas treniņu plāns', 'Piem., Pietupieni', true)}
-      ${renderWeeklyPlan('mealPlan', '🍽️ Nedēļas uztura plāns', 'Piem., Olbaltumvielām bagātas brokastis', false)}
+      ${renderWeeklyPlan('trainingPlan', '🏋️ Nedēļas treniņu plāns', 'Piem., Pietupieni', 'setsreps')}
+      ${renderWeeklyPlan('mealPlan', '🍽️ Nedēļas uztura plāns', 'Piem., Vistas krūtiņa', 'quantitygrams')}
 
       <div class="lo-panel">
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;">
@@ -4547,12 +4551,16 @@
         if(!text) return;
         const setsInput = root.querySelector(`[data-plan-sets-input="${planKey}|${day}"]`);
         const repsInput = root.querySelector(`[data-plan-reps-input="${planKey}|${day}"]`);
+        const quantityInput = root.querySelector(`[data-plan-quantity-input="${planKey}|${day}"]`);
+        const gramsInput = root.querySelector(`[data-plan-grams-input="${planKey}|${day}"]`);
         const plan = ensurePlan(planKey);
         plan[day].push({
           id: uid(),
           text,
           sets: setsInput && setsInput.value ? parseInt(setsInput.value, 10) : null,
           reps: repsInput && repsInput.value ? parseInt(repsInput.value, 10) : null,
+          quantity: quantityInput && quantityInput.value ? quantityInput.value.trim() : null,
+          grams: gramsInput && gramsInput.value ? parseInt(gramsInput.value, 10) : null,
         });
         await safeSet('health-data', state.health);
         render();
