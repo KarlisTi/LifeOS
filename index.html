@@ -1779,7 +1779,7 @@
           ${navItem('goals','Mērķi')}
           ${navItem('learning','Mācīšanās')}
           ${navItem('finance','Finanses')}
-          ${navItem('health','Veselība')}
+          ${navItem('health','Veselība un sports')}
           ${navItem('journal','Dienasgrāmata')}
         </div>
         <div class="lo-nav-spacer"></div>
@@ -2838,7 +2838,9 @@
 
   // ---------------- HEALTH ----------------
   function getHealthEntry(date){
-    return state.health.entries[date] || { sleepHours: null, sleepQuality: '', restingHR: null, workouts: [] };
+    const e = state.health.entries[date] || { sleepHours: null, sleepQuality: '', restingHR: null, workouts: [] };
+    if(!e.meals) e.meals = [];
+    return e;
   }
 
   function renderHealth(){
@@ -2846,8 +2848,8 @@
     const historyDates = Object.keys(state.health.entries).sort().reverse();
 
     return `
-      <div class="lo-module-title">Veselība</div>
-      <div class="lo-module-sub">Miega, treniņu un pulsa uzskaite — ievadi datus no Garmin / Samsung Health.</div>
+      <div class="lo-module-title">Veselība un sports</div>
+      <div class="lo-module-sub">Miega, treniņu, pulsa un uztura uzskaite — ievadi datus pats vai no Garmin / Samsung Health.</div>
 
       <div class="lo-panel">
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;">
@@ -2881,13 +2883,19 @@
         <div class="lo-panel-title">${icon('health')} Treniņi — ${state.healthDate}</div>
         <div class="lo-row-form">
           <input class="lo-input" id="new-workout-type" placeholder="Treniņa veids (piem., Skriešana, Peldēšana)" />
-          <input class="lo-input" type="number" min="1" id="new-workout-duration" placeholder="Ilgums (min)" style="flex:0 0 130px;" />
+          <input class="lo-input" type="number" min="1" id="new-workout-duration" placeholder="Ilgums (min)" style="flex:0 0 110px;" />
+          <select class="lo-select" id="new-workout-intensity" style="flex:0 0 130px;">
+            <option value="Vieglā">Vieglā</option>
+            <option value="Vidēja" selected>Vidēja</option>
+            <option value="Intensīva">Intensīva</option>
+          </select>
           <button class="lo-btn" id="add-workout-btn">+ Pievienot</button>
         </div>
         ${entry.workouts.length ? entry.workouts.map(w=>`
           <div class="lo-task-item">
             <div class="lo-task-text">${escapeHtml(w.type)}</div>
             <div class="lo-task-tags">
+              ${w.intensity ? `<span class="lo-tag">${w.intensity}</span>` : ''}
               <span class="lo-tag">${w.duration} min</span>
               <button class="lo-btn danger-ghost" data-del-workout="${w.id}">✕</button>
             </div>
@@ -2896,12 +2904,37 @@
       </div>
 
       <div class="lo-panel">
+        <div class="lo-panel-title">🍽️ Uztura žurnāls — ${state.healthDate}</div>
+        <div class="lo-module-sub" style="margin-bottom:12px;">Ieraksti brīvi to, ko ēdi — pēc standarta ēdienreižu struktūras (brokastis/pusdienas/vakariņas/uzkodas). Kalorijas nav obligātas.</div>
+        <div class="lo-row-form">
+          <select class="lo-select" id="new-meal-type" style="flex:0 0 140px;">
+            <option value="Brokastis">Brokastis</option>
+            <option value="Pusdienas">Pusdienas</option>
+            <option value="Vakariņas">Vakariņas</option>
+            <option value="Uzkoda">Uzkoda</option>
+          </select>
+          <input class="lo-input" id="new-meal-description" placeholder="Ko ēdi..." />
+          <input class="lo-input" type="number" min="0" id="new-meal-calories" placeholder="kcal (nav obligāti)" style="flex:0 0 140px;" />
+          <button class="lo-btn" id="add-meal-btn">+ Pievienot</button>
+        </div>
+        ${entry.meals.length ? entry.meals.map(m=>`
+          <div class="lo-task-item">
+            <div class="lo-task-text"><span class="lo-tag" style="margin-right:8px;">${escapeHtml(m.type)}</span>${escapeHtml(m.description)}</div>
+            <div class="lo-task-tags">
+              ${m.calories ? `<span class="lo-tag">${m.calories} kcal</span>` : ''}
+              <button class="lo-btn danger-ghost" data-del-meal="${m.id}">✕</button>
+            </div>
+          </div>
+        `).join('') : `<div class="lo-empty">Šai dienai vēl nav pievienots neviens ēdienreizes ieraksts.</div>`}
+      </div>
+
+      <div class="lo-panel">
         <div class="lo-panel-title">Vēsture</div>
         ${historyDates.length ? historyDates.map(d=>{
           const e = state.health.entries[d];
           return `<div class="lo-history-row" data-open-health="${d}">
             <div class="lo-history-date">${d}</div>
-            <div style="flex:1;">${e.sleepHours ? e.sleepHours+'h miegs' : '—'}${e.restingHR ? ' · '+e.restingHR+' bpm' : ''}${e.workouts.length ? ' · '+e.workouts.length+' treniņš/i' : ''}</div>
+            <div style="flex:1;">${e.sleepHours ? e.sleepHours+'h miegs' : '—'}${e.restingHR ? ' · '+e.restingHR+' bpm' : ''}${e.workouts.length ? ' · '+e.workouts.length+' treniņš/i' : ''}${e.meals && e.meals.length ? ' · '+e.meals.length+' ēdienreize/-s' : ''}</div>
           </div>`;
         }).join('') : `<div class="lo-empty">Vēl nav ierakstu.</div>`}
       </div>
@@ -4392,11 +4425,12 @@
       addWorkoutBtn.addEventListener('click', async ()=>{
         const typeInput = root.querySelector('#new-workout-type');
         const durationInput = root.querySelector('#new-workout-duration');
+        const intensitySelect = root.querySelector('#new-workout-intensity');
         const type = typeInput.value.trim();
         const duration = parseInt(durationInput.value, 10);
         if(!type || !duration) return;
         const current = getHealthEntry(state.healthDate);
-        current.workouts.push({ id: uid(), type, duration });
+        current.workouts.push({ id: uid(), type, duration, intensity: intensitySelect ? intensitySelect.value : 'Vidēja' });
         state.health.entries[state.healthDate] = current;
         await safeSet('health-data', state.health);
         render();
@@ -4407,6 +4441,36 @@
         const id = el.getAttribute('data-del-workout');
         const current = getHealthEntry(state.healthDate);
         current.workouts = current.workouts.filter(w=>w.id!==id);
+        state.health.entries[state.healthDate] = current;
+        await safeSet('health-data', state.health);
+        render();
+      });
+    });
+    const addMealBtn = root.querySelector('#add-meal-btn');
+    if(addMealBtn){
+      addMealBtn.addEventListener('click', async ()=>{
+        const typeSelect = root.querySelector('#new-meal-type');
+        const descInput = root.querySelector('#new-meal-description');
+        const caloriesInput = root.querySelector('#new-meal-calories');
+        const description = descInput.value.trim();
+        if(!description) return;
+        const current = getHealthEntry(state.healthDate);
+        current.meals.push({
+          id: uid(),
+          type: typeSelect ? typeSelect.value : 'Brokastis',
+          description,
+          calories: caloriesInput.value ? parseInt(caloriesInput.value, 10) : null,
+        });
+        state.health.entries[state.healthDate] = current;
+        await safeSet('health-data', state.health);
+        render();
+      });
+    }
+    root.querySelectorAll('[data-del-meal]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-del-meal');
+        const current = getHealthEntry(state.healthDate);
+        current.meals = current.meals.filter(m=>m.id!==id);
         state.health.entries[state.healthDate] = current;
         await safeSet('health-data', state.health);
         render();
