@@ -963,6 +963,20 @@
 .lo-health-field { flex: 1; min-width: 140px; }
 .lo-health-field label { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
 .lo-history-row { display: flex; align-items: center; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; cursor: pointer; }
+
+/* ---- Weekly plan ---- */
+.lo-plan-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.lo-plan-day-col { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; min-height: 100px; }
+.lo-plan-day-header { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+.lo-plan-item { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 11px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.lo-plan-item:last-of-type { border-bottom: none; }
+.lo-plan-empty { font-size: 10.5px; color: var(--text-dim); text-align: center; padding: 6px 0; }
+.lo-plan-add-row { display: flex; gap: 4px; margin-top: 6px; }
+.lo-plan-add-row .lo-input { font-size: 10.5px; padding: 5px 7px; }
+.lo-plan-add-row .lo-btn { padding: 5px 9px; font-size: 11px; }
+@media (max-width: 900px) {
+  .lo-plan-grid { grid-template-columns: repeat(7, minmax(120px, 1fr)); overflow-x: auto; }
+}
 .lo-history-row:hover { color: var(--accent); }
 .lo-history-date { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); flex: 0 0 90px; }
 
@@ -2843,6 +2857,45 @@
     return e;
   }
 
+  const PLAN_DAY_LABELS = ['Pr','Ot','Tr','Ce','Pk','Se','Sv'];
+  const PLAN_DAY_NAMES = ['Pirmdiena','Otrdiena','Trešdiena','Ceturtdiena','Piektdiena','Sestdiena','Svētdiena'];
+
+  function ensurePlan(planKey){
+    if(!state.health[planKey]){
+      state.health[planKey] = {};
+    }
+    PLAN_DAY_LABELS.forEach(d=>{
+      if(!state.health[planKey][d]) state.health[planKey][d] = [];
+    });
+    return state.health[planKey];
+  }
+
+  function renderWeeklyPlan(planKey, title, placeholder){
+    const plan = ensurePlan(planKey);
+    return `
+      <div class="lo-panel">
+        <div class="lo-panel-title">${title}</div>
+        <div class="lo-plan-grid">
+          ${PLAN_DAY_LABELS.map((d, i)=>`
+            <div class="lo-plan-day-col">
+              <div class="lo-plan-day-header">${PLAN_DAY_NAMES[i]}</div>
+              ${plan[d].length ? plan[d].map(item=>`
+                <div class="lo-plan-item">
+                  <span>${escapeHtml(item.text)}</span>
+                  <button class="lo-btn danger-ghost" data-del-plan-item="${planKey}|${d}|${item.id}">✕</button>
+                </div>
+              `).join('') : `<div class="lo-plan-empty">—</div>`}
+              <div class="lo-plan-add-row">
+                <input class="lo-input" data-plan-input="${planKey}|${d}" placeholder="${placeholder}" />
+                <button class="lo-btn ghost" data-add-plan-item="${planKey}|${d}">+</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   function renderHealth(){
     const entry = getHealthEntry(state.healthDate);
     const historyDates = Object.keys(state.health.entries).sort().reverse();
@@ -2850,6 +2903,9 @@
     return `
       <div class="lo-module-title">Veselība un sports</div>
       <div class="lo-module-sub">Miega, treniņu, pulsa un uztura uzskaite — ievadi datus pats vai no Garmin / Samsung Health.</div>
+
+      ${renderWeeklyPlan('trainingPlan', '🏋️ Nedēļas treniņu plāns', 'Piem., Skriešana 30 min')}
+      ${renderWeeklyPlan('mealPlan', '🍽️ Nedēļas uztura plāns', 'Piem., Olbaltumvielām bagātas brokastis')}
 
       <div class="lo-panel">
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;">
@@ -4472,6 +4528,36 @@
         const current = getHealthEntry(state.healthDate);
         current.meals = current.meals.filter(m=>m.id!==id);
         state.health.entries[state.healthDate] = current;
+        await safeSet('health-data', state.health);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-add-plan-item]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [planKey, day] = el.getAttribute('data-add-plan-item').split('|');
+        const input = root.querySelector(`[data-plan-input="${planKey}|${day}"]`);
+        const text = input.value.trim();
+        if(!text) return;
+        const plan = ensurePlan(planKey);
+        plan[day].push({ id: uid(), text });
+        await safeSet('health-data', state.health);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-plan-input]').forEach(input=>{
+      input.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter'){
+          const key = input.getAttribute('data-plan-input');
+          const btn = root.querySelector(`[data-add-plan-item="${key}"]`);
+          if(btn) btn.click();
+        }
+      });
+    });
+    root.querySelectorAll('[data-del-plan-item]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [planKey, day, itemId] = el.getAttribute('data-del-plan-item').split('|');
+        const plan = ensurePlan(planKey);
+        plan[day] = plan[day].filter(item=>item.id!==itemId);
         await safeSet('health-data', state.health);
         render();
       });
