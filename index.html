@@ -1293,6 +1293,7 @@
     habitsTableMonth: new Date().getMonth(),
     googleConnected: false,
     googleSyncing: false,
+    businessView: 'clients',
     calendarView: 'month',
     calWeekStart: null,
     finance: { transactions: [], budgets: [] },
@@ -1452,6 +1453,7 @@
     state.journal = await safeGet('journal-data', { entries: {} });
     state.learning = await safeGet('learning-data', { tracks: [] });
     state.finance = await safeGet('finance-data', { transactions: [], budgets: [] });
+    state.business = await safeGet('business-data', { clients: [], invoices: [], ideas: [] });
     if(!state.finance.budgets) state.finance.budgets = [];
     state.health = await safeGet('health-data', { entries: {} });
     state.banner = await safeGet('banner-data', { src: null, posY: 50 });
@@ -1473,6 +1475,7 @@
       journal: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
       learning: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 18l6-6-6-6"/><path d="M8 6l-6 6 6 6"/></svg>',
       finance: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 6V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/></svg>',
+      business: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><path d="M2 13h20"/></svg>',
       health: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/><path d="M3.5 12H8l2-3 2.5 5 1.5-2H20.5"/></svg>',
     };
     return icons[name] || '';
@@ -1949,7 +1952,7 @@
   }
 
   function moduleTitleLine(){
-    const map = { dashboard: 'root@lifeos:~$ status', calendar: 'root@lifeos:~$ ./calendar', habits: 'root@lifeos:~$ ./habits', tasks: 'root@lifeos:~$ ./tasks', goals: 'root@lifeos:~$ ./goals', learning: 'root@lifeos:~$ ./learning', finance: 'root@lifeos:~$ ./finance', health: 'root@lifeos:~$ ./health', journal: 'root@lifeos:~$ ./journal' };
+    const map = { dashboard: 'root@lifeos:~$ status', calendar: 'root@lifeos:~$ ./calendar', habits: 'root@lifeos:~$ ./habits', tasks: 'root@lifeos:~$ ./tasks', goals: 'root@lifeos:~$ ./goals', learning: 'root@lifeos:~$ ./learning', finance: 'root@lifeos:~$ ./finance', business: 'root@lifeos:~$ ./business', health: 'root@lifeos:~$ ./health', journal: 'root@lifeos:~$ ./journal' };
     return map[state.module] || '';
   }
 
@@ -1961,6 +1964,7 @@
     if(state.module==='goals') return renderGoals();
     if(state.module==='learning') return renderLearning();
     if(state.module==='finance') return renderFinance();
+    if(state.module==='business') return renderBusiness();
     if(state.module==='health') return renderHealth();
     if(state.module==='journal') return renderJournal();
     return '';
@@ -2918,6 +2922,138 @@
           </div>
           `;
         }).join('') : `<div class="lo-empty">Vēl nav iestatītu budžetu. Pievieno kategoriju un ikmēneša limitu augstāk.</div>`}
+      </div>
+    `;
+  }
+
+  // ---------------- BUSINESS ----------------
+  const CLIENT_STATUSES = ['Aktīvs','Gaida','Pauzēts','Pabeigts'];
+  const INVOICE_STATUSES = ['Sagatavots','Nosūtīts','Apmaksāts','Kavēts'];
+  const IDEA_STATUSES = ['Ideja','Izpēte','Attīstībā','Palaists','Atlikts'];
+
+  function renderBusiness(){
+    const view = state.businessView || 'clients';
+    const clients = state.business.clients || [];
+    const invoices = state.business.invoices || [];
+    const ideas = state.business.ideas || [];
+
+    const totalInvoiced = invoices.reduce((s,i)=>s+i.amount,0);
+    const totalPaid = invoices.filter(i=>i.status==='Apmaksāts').reduce((s,i)=>s+i.amount,0);
+    const totalUnpaid = totalInvoiced - totalPaid;
+
+    return `
+      <div class="lo-module-title">Bizness</div>
+      <div class="lo-module-sub">Klienti, rēķini un biznesa idejas vienuviet.</div>
+
+      <div class="lo-grid" style="margin-bottom:16px;">
+        <div class="lo-card"><div class="lo-card-label">Aktīvie klienti</div><div class="lo-card-value">${clients.filter(c=>c.status==='Aktīvs').length}</div></div>
+        <div class="lo-card"><div class="lo-card-label">Apmaksāts</div><div class="lo-card-value accent">€${totalPaid.toFixed(2)}</div></div>
+        <div class="lo-card"><div class="lo-card-label">Neapmaksāts</div><div class="lo-card-value warn">€${totalUnpaid.toFixed(2)}</div></div>
+      </div>
+
+      <div class="lo-tabs" style="margin-bottom:16px;">
+        <div class="lo-tab ${view==='clients'?'active':''}" data-business-view="clients">Klienti (${clients.length})</div>
+        <div class="lo-tab ${view==='invoices'?'active':''}" data-business-view="invoices">Rēķini (${invoices.length})</div>
+        <div class="lo-tab ${view==='ideas'?'active':''}" data-business-view="ideas">Idejas (${ideas.length})</div>
+      </div>
+
+      ${view==='clients' ? renderBusinessClients(clients) : ''}
+      ${view==='invoices' ? renderBusinessInvoices(invoices, clients) : ''}
+      ${view==='ideas' ? renderBusinessIdeas(ideas) : ''}
+    `;
+  }
+
+  function renderBusinessClients(clients){
+    return `
+      <div class="lo-panel">
+        <div class="lo-row-form">
+          <input class="lo-input" id="new-client-name" placeholder="Klienta / uzņēmuma nosaukums" />
+          <input class="lo-input" id="new-client-contact" placeholder="Kontakti (e-pasts/tālrunis)" />
+          <select class="lo-select" id="new-client-status" style="flex:0 0 130px;">
+            ${CLIENT_STATUSES.map(s=>`<option value="${s}" ${s==='Aktīvs'?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <button class="lo-btn" id="add-client-btn">+ Pievienot</button>
+        </div>
+      </div>
+      <div class="lo-panel">
+        ${clients.length ? clients.map(c=>`
+          <div class="lo-task-item">
+            <div class="lo-task-text">${escapeHtml(c.name)}${c.contact ? ` <span style="color:var(--text-dim);font-size:11px;">· ${escapeHtml(c.contact)}</span>` : ''}</div>
+            <div class="lo-task-tags">
+              <select class="lo-select" data-client-status="${c.id}" style="font-size:11px;padding:5px 7px;">
+                ${CLIENT_STATUSES.map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${s}</option>`).join('')}
+              </select>
+              <button class="lo-btn danger-ghost" data-del-client="${c.id}">✕</button>
+            </div>
+          </div>
+        `).join('') : `<div class="lo-empty">Vēl nav pievienots neviens klients.</div>`}
+      </div>
+    `;
+  }
+
+  function renderBusinessInvoices(invoices, clients){
+    const sorted = [...invoices].sort((a,b)=> (b.issueDate||'').localeCompare(a.issueDate||''));
+    return `
+      <div class="lo-panel">
+        <div class="lo-row-form">
+          <select class="lo-select" id="new-invoice-client" style="flex:1;min-width:140px;">
+            <option value="">Bez klienta</option>
+            ${clients.map(c=>`<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('')}
+          </select>
+          <input class="lo-input" type="number" step="0.01" min="0" id="new-invoice-amount" placeholder="Summa (€)" style="flex:0 0 120px;" />
+        </div>
+        <div class="lo-row-form">
+          <input type="date" class="lo-input" id="new-invoice-issue-date" value="${todayStr()}" style="flex:1;min-width:130px;" />
+          <input type="date" class="lo-input" id="new-invoice-due-date" style="flex:1;min-width:130px;" />
+          <select class="lo-select" id="new-invoice-status" style="flex:0 0 130px;">
+            ${INVOICE_STATUSES.map(s=>`<option value="${s}" ${s==='Nosūtīts'?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <button class="lo-btn" id="add-invoice-btn">+ Pievienot</button>
+        </div>
+      </div>
+      <div class="lo-panel">
+        ${sorted.length ? sorted.map(inv=>`
+          <div class="lo-task-item">
+            <div class="lo-task-text">${inv.client ? escapeHtml(inv.client) : '—'} <span style="color:var(--accent);font-weight:600;">€${inv.amount.toFixed(2)}</span></div>
+            <div class="lo-task-tags">
+              <span class="lo-tag">${inv.issueDate||''}${inv.dueDate ? ' → '+inv.dueDate : ''}</span>
+              <select class="lo-select" data-invoice-status="${inv.id}" style="font-size:11px;padding:5px 7px;">
+                ${INVOICE_STATUSES.map(s=>`<option value="${s}" ${inv.status===s?'selected':''}>${s}</option>`).join('')}
+              </select>
+              <button class="lo-btn danger-ghost" data-del-invoice="${inv.id}">✕</button>
+            </div>
+          </div>
+        `).join('') : `<div class="lo-empty">Vēl nav pievienots neviens rēķins.</div>`}
+      </div>
+    `;
+  }
+
+  function renderBusinessIdeas(ideas){
+    return `
+      <div class="lo-panel">
+        <div class="lo-row-form">
+          <input class="lo-input" id="new-idea-title" placeholder="Idejas nosaukums" />
+          <select class="lo-select" id="new-idea-status" style="flex:0 0 130px;">
+            ${IDEA_STATUSES.map(s=>`<option value="${s}" ${s==='Ideja'?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="lo-row-form">
+          <input class="lo-input" id="new-idea-description" placeholder="Apraksts (nav obligāti)" />
+          <button class="lo-btn" id="add-idea-btn">+ Pievienot</button>
+        </div>
+      </div>
+      <div class="lo-panel">
+        ${ideas.length ? ideas.map(idea=>`
+          <div class="lo-task-item">
+            <div class="lo-task-text">${escapeHtml(idea.title)}${idea.description ? `<div style="font-size:11.5px;color:var(--text-muted);margin-top:3px;">${escapeHtml(idea.description)}</div>` : ''}</div>
+            <div class="lo-task-tags">
+              <select class="lo-select" data-idea-status="${idea.id}" style="font-size:11px;padding:5px 7px;">
+                ${IDEA_STATUSES.map(s=>`<option value="${s}" ${idea.status===s?'selected':''}>${s}</option>`).join('')}
+              </select>
+              <button class="lo-btn danger-ghost" data-del-idea="${idea.id}">✕</button>
+            </div>
+          </div>
+        `).join('') : `<div class="lo-empty">Vēl nav pievienota neviena ideja.</div>`}
       </div>
     `;
   }
@@ -4558,6 +4694,111 @@
         const id = el.getAttribute('data-del-budget');
         state.finance.budgets = state.finance.budgets.filter(b=>b.id!==id);
         await safeSet('finance-data', state.finance);
+        render();
+      });
+    });
+
+    // Business
+    root.querySelectorAll('[data-business-view]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        state.businessView = el.getAttribute('data-business-view');
+        render();
+      });
+    });
+    const addClientBtn = root.querySelector('#add-client-btn');
+    if(addClientBtn){
+      addClientBtn.addEventListener('click', async ()=>{
+        const nameInput = root.querySelector('#new-client-name');
+        const contactInput = root.querySelector('#new-client-contact');
+        const statusSelect = root.querySelector('#new-client-status');
+        const name = nameInput.value.trim();
+        if(!name) return;
+        state.business.clients.push({ id: uid(), name, contact: contactInput.value.trim(), status: statusSelect.value });
+        await safeSet('business-data', state.business);
+        render();
+      });
+    }
+    root.querySelectorAll('[data-client-status]').forEach(el=>{
+      el.addEventListener('change', async ()=>{
+        const id = el.getAttribute('data-client-status');
+        const c = state.business.clients.find(c=>c.id===id);
+        c.status = el.value;
+        await safeSet('business-data', state.business);
+      });
+    });
+    root.querySelectorAll('[data-del-client]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-del-client');
+        state.business.clients = state.business.clients.filter(c=>c.id!==id);
+        await safeSet('business-data', state.business);
+        render();
+      });
+    });
+    const addInvoiceBtn = root.querySelector('#add-invoice-btn');
+    if(addInvoiceBtn){
+      addInvoiceBtn.addEventListener('click', async ()=>{
+        const clientSelect = root.querySelector('#new-invoice-client');
+        const amountInput = root.querySelector('#new-invoice-amount');
+        const issueDateInput = root.querySelector('#new-invoice-issue-date');
+        const dueDateInput = root.querySelector('#new-invoice-due-date');
+        const statusSelect = root.querySelector('#new-invoice-status');
+        const amount = parseFloat(amountInput.value);
+        if(!amount || amount <= 0) return;
+        state.business.invoices.push({
+          id: uid(),
+          client: clientSelect.value || '',
+          amount,
+          issueDate: issueDateInput.value || todayStr(),
+          dueDate: dueDateInput.value || null,
+          status: statusSelect.value,
+        });
+        await safeSet('business-data', state.business);
+        render();
+      });
+    }
+    root.querySelectorAll('[data-invoice-status]').forEach(el=>{
+      el.addEventListener('change', async ()=>{
+        const id = el.getAttribute('data-invoice-status');
+        const inv = state.business.invoices.find(i=>i.id===id);
+        inv.status = el.value;
+        await safeSet('business-data', state.business);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-del-invoice]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-del-invoice');
+        state.business.invoices = state.business.invoices.filter(i=>i.id!==id);
+        await safeSet('business-data', state.business);
+        render();
+      });
+    });
+    const addIdeaBtn = root.querySelector('#add-idea-btn');
+    if(addIdeaBtn){
+      addIdeaBtn.addEventListener('click', async ()=>{
+        const titleInput = root.querySelector('#new-idea-title');
+        const descInput = root.querySelector('#new-idea-description');
+        const statusSelect = root.querySelector('#new-idea-status');
+        const title = titleInput.value.trim();
+        if(!title) return;
+        state.business.ideas.push({ id: uid(), title, description: descInput.value.trim(), status: statusSelect.value });
+        await safeSet('business-data', state.business);
+        render();
+      });
+    }
+    root.querySelectorAll('[data-idea-status]').forEach(el=>{
+      el.addEventListener('change', async ()=>{
+        const id = el.getAttribute('data-idea-status');
+        const idea = state.business.ideas.find(i=>i.id===id);
+        idea.status = el.value;
+        await safeSet('business-data', state.business);
+      });
+    });
+    root.querySelectorAll('[data-del-idea]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const id = el.getAttribute('data-del-idea');
+        state.business.ideas = state.business.ideas.filter(i=>i.id!==id);
+        await safeSet('business-data', state.business);
         render();
       });
     });
