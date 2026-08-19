@@ -765,6 +765,19 @@
 .lo-note-block { border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 8px; background: var(--bg-raised); }
 .lo-note-block-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .lo-note-block-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.lo-note-block-title {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  padding: 4px 2px;
+  margin-right: 8px;
+}
+.lo-note-block-title:focus { outline: none; border-bottom-color: var(--accent); }
+.lo-note-block-title::placeholder { font-weight: 400; color: var(--text-dim); }
 .lo-code-textarea {
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
@@ -1816,6 +1829,7 @@
           ${navItem('goals','Mērķi')}
           ${navItem('learning','Mācīšanās')}
           ${navItem('finance','Finanses')}
+          ${navItem('business','Bizness')}
           ${navItem('health','Veselība un sports')}
           ${navItem('journal','Dienasgrāmata')}
         </div>
@@ -2405,7 +2419,7 @@
                 ${t.project ? `<span class="lo-tag">${escapeHtml(t.project)}</span>` : ''}
                 ${t.dueDate ? `<span class="lo-tag" style="color:${t.dueDate < todayStr() && !t.done ? 'var(--danger)' : 'var(--text-muted)'};">${formatTaskDateRange(t)}</span>` : ''}
                 <button class="lo-btn ghost ${subtasks.length?'has-subtasks':''}" data-toggle-subtasks="${t.id}" style="padding:5px 9px;font-size:11px;" title="Apakšuzdevumi">☰${subtasks.length ? ' '+subDone+'/'+subtasks.length : ''}</button>
-                <button class="lo-btn ghost ${t.notes?'has-subtasks':''}" data-toggle-task-notes="${t.id}" style="padding:5px 9px;font-size:11px;" title="Piezīmes">📝</button>
+                <button class="lo-btn ghost ${(t.notesBlocks && t.notesBlocks.length) || t.notes ? 'has-subtasks' : ''}" data-toggle-task-notes="${t.id}" style="padding:5px 9px;font-size:11px;" title="Piezīmes">📝</button>
                 <button class="lo-btn ghost ${t.imagePath?'has-subtasks':''}" data-toggle-task-image="${t.id}" style="padding:5px 9px;font-size:11px;" title="Attēls">🖼️</button>
                 <button class="lo-btn ghost" data-edit-task="${t.id}" style="padding:5px 9px;font-size:11px;">✎</button>
                 <button class="lo-btn danger-ghost" data-del-task="${t.id}">✕</button>
@@ -2432,11 +2446,28 @@
               </div>
             ` : ''}
             ${notesOpen ? `
-              <div class="lo-task-notes-panel">
-                <div class="lo-task-notes-preview">${renderTaskNotesMarkdown(t.notes, t.id)}</div>
-                <textarea class="lo-textarea lo-task-notes-textarea" data-task-notes-input="${t.id}" placeholder="Raksti brīvi... piemēram:&#10;- vienums sarakstā&#10;1. numurēts vienums&#10;- [ ] atzīmējams darāmais&#10;**treknraksts** *slīpraksts*">${escapeHtml(t.notes||'')}</textarea>
-                <div class="lo-task-notes-hint">Sintakse: <code>- vienums</code> · <code>1. vienums</code> · <code>- [ ] atzīmējams</code> · <code>**trekns**</code> · <code>*slīps*</code></div>
-                <button class="lo-btn ghost" data-save-task-notes="${t.id}">Saglabāt piezīmes</button>
+              <div class="lo-task-notes-panel" data-notes-task="${t.id}">
+                ${(t.notesBlocks || (t.notes ? [{id:'legacy', title:'', content:t.notes}] : [])).map((block, bi)=>{
+                  const blockEditKey = `${t.id}|${block.id}`;
+                  const isEditing = !!state.editingNoteBlock[blockEditKey] || !block.content;
+                  return `
+                  <div class="lo-note-block">
+                    <div class="lo-note-block-header">
+                      <input class="lo-input lo-note-block-title" data-task-note-title="${t.id}|${block.id}" value="${escapeHtml(block.title||'')}" placeholder="Virsraksts (piem., Iepirkumu saraksts)" />
+                      <div style="display:flex;gap:6px;">
+                        ${!isEditing ? `<button class="lo-btn ghost" data-edit-task-note-block="${blockEditKey}" style="padding:4px 8px;font-size:10.5px;">Rediģēt</button>` : ''}
+                        <button class="lo-btn danger-ghost" data-del-task-note-block="${t.id}|${block.id}">✕</button>
+                      </div>
+                    </div>
+                    ${!isEditing ? `<div class="lo-task-notes-preview">${renderTaskNotesMarkdown(block.content, `${t.id}|${block.id}`)}</div>` : ''}
+                    <textarea class="lo-textarea lo-task-notes-textarea" data-task-note-content="${t.id}|${block.id}" style="${isEditing ? '' : 'display:none;'}" placeholder="Raksti brīvi... piemēram:&#10;- vienums sarakstā&#10;1. numurēts vienums&#10;- [ ] atzīmējams darāmais&#10;**treknraksts** *slīpraksts*">${escapeHtml(block.content||'')}</textarea>
+                  </div>
+                `;}).join('')}
+                <div class="lo-task-notes-hint">Sintakse saturam: <code>- vienums</code> · <code>1. vienums</code> · <code>- [ ] atzīmējams</code> · <code>**trekns**</code> · <code>*slīps*</code></div>
+                <div class="lo-row-form" style="margin-top:8px;margin-bottom:0;">
+                  <button class="lo-btn ghost" data-add-task-note-block="${t.id}">+ Pievienot lauciņu</button>
+                  <button class="lo-btn" data-save-task-notes="${t.id}">Saglabāt visas piezīmes</button>
+                </div>
               </div>
             ` : ''}
             ${imageOpen ? `
@@ -3399,7 +3430,7 @@
     return s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
   }
 
-  function renderTaskNotesMarkdown(text, taskId){
+  function renderTaskNotesMarkdown(text, blockKey){
     if(!text) return `<div class="lo-empty" style="padding:6px 0;">Vēl nav piezīmju.</div>`;
     const rawLines = text.split('\n');
     let html = '';
@@ -3416,7 +3447,7 @@
       if(checklistMatch){
         closeLists();
         const checked = checklistMatch[1].toLowerCase() === 'x';
-        html += `<div class="lo-md-checklist-item"><span class="lo-md-checkbox" data-toggle-note-checkbox="${taskId}|${idx}">${checked?'☑':'☐'}</span><span style="${checked?'text-decoration:line-through;color:var(--text-dim);':''}">${inlineMdFormat(checklistMatch[2])}</span></div>`;
+        html += `<div class="lo-md-checklist-item"><span class="lo-md-checkbox" data-toggle-note-checkbox="${blockKey}|${idx}">${checked?'☑':'☐'}</span><span style="${checked?'text-decoration:line-through;color:var(--text-dim);':''}">${inlineMdFormat(checklistMatch[2])}</span></div>`;
       } else if(ulMatch){
         if(inOl){ html += '</ol>'; inOl = false; }
         if(!inUl){ html += '<ul class="lo-md-list">'; inUl = true; }
@@ -3981,26 +4012,69 @@
         render();
       });
     });
+    root.querySelectorAll('[data-edit-task-note-block]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const key = el.getAttribute('data-edit-task-note-block');
+        state.editingNoteBlock[key] = true;
+        render();
+      });
+    });
+    root.querySelectorAll('[data-add-task-note-block]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const taskId = el.getAttribute('data-add-task-note-block');
+        const t = state.tasks.tasks.find(t=>t.id===taskId);
+        if(!t.notesBlocks){
+          t.notesBlocks = t.notes ? [{ id: uid(), title: '', content: t.notes }] : [];
+          delete t.notes;
+        }
+        const newBlock = { id: uid(), title: '', content: '' };
+        t.notesBlocks.push(newBlock);
+        state.editingNoteBlock[`${taskId}|${newBlock.id}`] = true;
+        await safeSet('tasks-data', state.tasks);
+        render();
+      });
+    });
+    root.querySelectorAll('[data-del-task-note-block]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const [taskId, blockId] = el.getAttribute('data-del-task-note-block').split('|');
+        const t = state.tasks.tasks.find(t=>t.id===taskId);
+        if(t.notesBlocks) t.notesBlocks = t.notesBlocks.filter(b=>b.id!==blockId);
+        await safeSet('tasks-data', state.tasks);
+        render();
+      });
+    });
     root.querySelectorAll('[data-save-task-notes]').forEach(el=>{
       el.addEventListener('click', async ()=>{
-        const id = el.getAttribute('data-save-task-notes');
-        const textarea = root.querySelector(`[data-task-notes-input="${id}"]`);
-        const t = state.tasks.tasks.find(t=>t.id===id);
-        t.notes = textarea.value;
+        const taskId = el.getAttribute('data-save-task-notes');
+        const t = state.tasks.tasks.find(t=>t.id===taskId);
+        const container = root.querySelector(`[data-notes-task="${taskId}"]`);
+        const titleInputs = container.querySelectorAll('[data-task-note-title]');
+        const blocks = [];
+        titleInputs.forEach(titleInput=>{
+          const [, blockId] = titleInput.getAttribute('data-task-note-title').split('|');
+          const contentTextarea = container.querySelector(`[data-task-note-content="${taskId}|${blockId}"]`);
+          blocks.push({ id: blockId, title: titleInput.value.trim(), content: contentTextarea ? contentTextarea.value : '' });
+          delete state.editingNoteBlock[`${taskId}|${blockId}`];
+        });
+        t.notesBlocks = blocks;
+        delete t.notes;
         await safeSet('tasks-data', state.tasks);
         render();
       });
     });
     root.querySelectorAll('[data-toggle-note-checkbox]').forEach(el=>{
       el.addEventListener('click', async ()=>{
-        const [taskId, idxStr] = el.getAttribute('data-toggle-note-checkbox').split('|');
+        const [taskId, blockId, idxStr] = el.getAttribute('data-toggle-note-checkbox').split('|');
         const idx = parseInt(idxStr, 10);
         const t = state.tasks.tasks.find(t=>t.id===taskId);
-        const lines = (t.notes || '').split('\n');
+        const block = (t.notesBlocks || []).find(b=>b.id===blockId) || (blockId==='legacy' ? { content: t.notes } : null);
+        if(!block) return;
+        const lines = (block.content || '').split('\n');
         const line = lines[idx] || '';
         if(/\[ \]/.test(line)) lines[idx] = line.replace('[ ]', '[x]');
         else if(/\[x\]/i.test(line)) lines[idx] = line.replace(/\[x\]/i, '[ ]');
-        t.notes = lines.join('\n');
+        block.content = lines.join('\n');
+        if(blockId==='legacy') t.notes = block.content;
         await safeSet('tasks-data', state.tasks);
         render();
       });
