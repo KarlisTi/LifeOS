@@ -23,6 +23,55 @@
   --radius: 10px;
 }
 
+.lifeos-root.theme-dracula {
+  --bg-void:#282A36; --bg-panel:#21222C; --bg-raised:#343746;
+  --accent:#BD93F9; --accent-dim: rgba(189,147,249,0.16);
+  --warn:#FFB86C; --warn-dim: rgba(255,184,108,0.16);
+  --danger:#FF5555;
+  --text:#F8F8F2; --text-muted:#9BA0B0; --text-dim:#6272A4;
+  --border:#3B3E52;
+}
+.lifeos-root.theme-onedark {
+  --bg-void:#282C34; --bg-panel:#21252B; --bg-raised:#2C313A;
+  --accent:#61AFEF; --accent-dim: rgba(97,175,239,0.16);
+  --warn:#E5C07B; --warn-dim: rgba(229,192,123,0.16);
+  --danger:#E06C75;
+  --text:#DCDFE4; --text-muted:#8E97A7; --text-dim:#5C6370;
+  --border:#3A3F4B;
+}
+.lifeos-root.theme-monokai {
+  --bg-void:#272822; --bg-panel:#1E1F1A; --bg-raised:#3E3D32;
+  --accent:#A6E22E; --accent-dim: rgba(166,226,46,0.16);
+  --warn:#E6DB74; --warn-dim: rgba(230,219,116,0.16);
+  --danger:#F92672;
+  --text:#F8F8F2; --text-muted:#9E9C8F; --text-dim:#75715E;
+  --border:#49483E;
+}
+.lifeos-root.theme-nord {
+  --bg-void:#2E3440; --bg-panel:#242933; --bg-raised:#3B4252;
+  --accent:#88C0D0; --accent-dim: rgba(136,192,208,0.16);
+  --warn:#EBCB8B; --warn-dim: rgba(235,203,139,0.16);
+  --danger:#BF616A;
+  --text:#ECEFF4; --text-muted:#9AA5B5; --text-dim:#616E88;
+  --border:#434C5E;
+}
+.lifeos-root.theme-gruvbox {
+  --bg-void:#282828; --bg-panel:#1D2021; --bg-raised:#3C3836;
+  --accent:#B8BB26; --accent-dim: rgba(184,187,38,0.16);
+  --warn:#FE8019; --warn-dim: rgba(254,128,25,0.16);
+  --danger:#FB4934;
+  --text:#EBDBB2; --text-muted:#A89A84; --text-dim:#7C6F64;
+  --border:#504945;
+}
+.lifeos-root.theme-tokyonight {
+  --bg-void:#1A1B26; --bg-panel:#16161E; --bg-raised:#24283B;
+  --accent:#7AA2F7; --accent-dim: rgba(122,162,247,0.16);
+  --warn:#E0AF68; --warn-dim: rgba(224,175,104,0.16);
+  --danger:#F7768E;
+  --text:#C0CAF5; --text-muted:#8B90B0; --text-dim:#565F89;
+  --border:#2E3348;
+}
+
 .lifeos-root {
   font-family: 'Inter', sans-serif;
   background: var(--bg-void);
@@ -171,6 +220,15 @@
   line-height: 1.6;
 }
 .lo-status-mini .dot { color: var(--accent); }
+.lo-theme-picker { display: flex; gap: 5px; margin: 8px 0; flex-wrap: wrap; }
+.lo-theme-swatch {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.lo-theme-swatch.active { border-color: var(--text); box-shadow: 0 0 0 1px var(--bg-panel); }
 
 /* ---- YouTube Player ---- */
 .lo-player { margin: 14px 0; padding-top: 14px; border-top: 1px solid var(--border); }
@@ -1093,6 +1151,16 @@
     '🎨','🎵','🐾','🌱','🎮','📷','⚽'
   ];
   const TASK_COLOR_PRESETS = ['#4FD1C5','#E8A33D','#E8615C','#7C9EF5','#C77DFF','#5EEAD4','#F4A261','#94A3B8'];
+  const THEMES = [
+    { key: 'default', name: 'LifeOS', color: '#4FD1C5' },
+    { key: 'dracula', name: 'Dracula', color: '#BD93F9' },
+    { key: 'onedark', name: 'One Dark Pro', color: '#61AFEF' },
+    { key: 'monokai', name: 'Monokai', color: '#A6E22E' },
+    { key: 'nord', name: 'Nord', color: '#88C0D0' },
+    { key: 'gruvbox', name: 'Gruvbox', color: '#FE8019' },
+    { key: 'tokyonight', name: 'Tokyo Night', color: '#7AA2F7' },
+  ];
+
   const TASK_LABELS = [
     { key: 'darbs', name: 'Darbs', icon: '💼', color: '#5B8DEF' },
     { key: 'majas', name: 'Mājas', icon: '🏠', color: '#F4A261' },
@@ -1294,6 +1362,7 @@
     googleConnected: false,
     googleSyncing: false,
     businessView: 'clients',
+    theme: 'default',
     calendarView: 'month',
     calWeekStart: null,
     finance: { transactions: [], budgets: [] },
@@ -1454,6 +1523,8 @@
     state.learning = await safeGet('learning-data', { tracks: [] });
     state.finance = await safeGet('finance-data', { transactions: [], budgets: [] });
     state.business = await safeGet('business-data', { clients: [], invoices: [], ideas: [] });
+    const uiSettings = await safeGet('ui-settings', { theme: 'default' });
+    state.theme = uiSettings.theme || 'default';
     if(!state.finance.budgets) state.finance.budgets = [];
     state.health = await safeGet('health-data', { entries: {} });
     state.banner = await safeGet('banner-data', { src: null, posY: 50 });
@@ -1815,6 +1886,7 @@
     closeTimePicker();
     closeSearch();
     closeQuickAdd();
+    root.className = 'lifeos-root' + (state.theme && state.theme !== 'default' ? ` theme-${state.theme}` : '');
     if(!state.loaded){
       root.innerHTML = `<div style="padding:40px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:13px;">Ielādē sistēmu...</div>`;
       return;
@@ -1840,6 +1912,9 @@
         <div class="lo-status-mini">
           <div><span class="dot">●</span> SISTĒMA AKTĪVA</div>
           <div>UPTIME: ${uptimeDays()} d.</div>
+          <div class="lo-theme-picker" title="Tēma">
+            ${THEMES.map(t=>`<button type="button" class="lo-theme-swatch ${state.theme===t.key?'active':''}" data-set-theme="${t.key}" style="background:${t.color};" title="${t.name}"></button>`).join('')}
+          </div>
           <button class="lo-logout-btn" id="logout-btn">IZRAKSTĪTIES</button>
         </div>
       </div>
@@ -3667,6 +3742,14 @@
         await sb.auth.signOut();
       });
     }
+    root.querySelectorAll('[data-set-theme]').forEach(el=>{
+      el.addEventListener('click', async ()=>{
+        const themeKey = el.getAttribute('data-set-theme');
+        state.theme = themeKey;
+        render();
+        await safeSet('ui-settings', { theme: themeKey });
+      });
+    });
 
     const sidebarToggleBtn = root.querySelector('#sidebar-toggle-btn');
     if(sidebarToggleBtn){
