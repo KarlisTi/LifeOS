@@ -2807,10 +2807,29 @@
     };
   }
 
+  function totalAccountsBalance(){
+    const accounts = state.finance.accounts || [];
+    return accounts.reduce((sum, a)=>{
+      const balance = state.finance.transactions.reduce((s,t)=>{
+        if(t.type === 'transfer'){
+          if(t.fromAccountId === a.id) return s - t.amount;
+          if(t.toAccountId === a.id) return s + t.amount;
+          return s;
+        }
+        if(t.type === 'savings') return s;
+        if(t.accountId !== a.id) return s;
+        return t.type === 'income' ? s + t.amount : s - t.amount;
+      }, 0);
+      return sum + balance;
+    }, 0);
+  }
+
   function renderFinancePanel(){
     const { income, expense } = monthTotals(state.finVizYear, state.finVizMonth);
     const balance = income - expense;
     const monthLabel = new Date(state.finVizYear, state.finVizMonth, 1).toLocaleDateString('lv-LV', { month: 'long', year: 'numeric' });
+    const accountsTotal = totalAccountsBalance();
+    const hasAccounts = (state.finance.accounts || []).length > 0;
     return `
       <div class="lo-panel">
         <div class="lo-panel-title" style="justify-content:space-between;">
@@ -2834,6 +2853,7 @@
           <div class="lo-card"><div class="lo-card-label">Ienākumi</div><div class="lo-card-value accent">€${income.toFixed(2)}</div></div>
           <div class="lo-card"><div class="lo-card-label">Izdevumi</div><div class="lo-card-value" style="color:var(--danger);">€${expense.toFixed(2)}</div></div>
           <div class="lo-card"><div class="lo-card-label">Bilance</div><div class="lo-card-value" style="color:${balance>=0?'var(--accent)':'var(--danger)'};">€${balance.toFixed(2)}</div></div>
+          ${hasAccounts ? `<div class="lo-card"><div class="lo-card-label">Kopā kontos</div><div class="lo-card-value" style="color:${accountsTotal>=0?'var(--accent)':'var(--danger)'};">€${accountsTotal.toFixed(2)}</div></div>` : ''}
         </div>
         <div class="lo-chart-wrap"><canvas id="finance-chart"></canvas></div>
       </div>
