@@ -2573,7 +2573,7 @@
   function goalFinanceSaved(g){
     if(!g.financeCategory) return 0;
     return state.finance.transactions
-      .filter(t=>t.type==='income' && t.category === g.financeCategory)
+      .filter(t=>t.type==='savings' && t.category === g.financeCategory)
       .reduce((sum,t)=>sum+t.amount, 0);
   }
 
@@ -2757,8 +2757,10 @@
     const key = `${year}-${String(month+1).padStart(2,'0')}`;
     let income = 0, expense = 0; const byCategory = {};
     state.finance.transactions.forEach(t=>{
+      if(t.type==='transfer') return;
       if(t.date.slice(0,7)===key){
         if(t.type==='income') income += t.amount;
+        else if(t.type==='savings') expense += t.amount;
         else { expense += t.amount; byCategory[t.category] = (byCategory[t.category]||0) + t.amount; }
       }
     });
@@ -2767,6 +2769,7 @@
   function yearTotals(year){
     const income = new Array(12).fill(0), expense = new Array(12).fill(0);
     state.finance.transactions.forEach(t=>{
+      if(t.type==='transfer') return;
       const [y,m] = t.date.split('-');
       if(parseInt(y,10)===year){
         const idx = parseInt(m,10)-1;
@@ -2779,6 +2782,7 @@
     const days = new Date(year, month+1, 0).getDate();
     const income = new Array(days).fill(0), expense = new Array(days).fill(0);
     state.finance.transactions.forEach(t=>{
+      if(t.type==='transfer') return;
       const d = new Date(t.date+'T00:00:00');
       if(d.getFullYear()===year && d.getMonth()===month){
         const idx = d.getDate()-1;
@@ -2884,16 +2888,25 @@
   function renderTxList(){
     const sorted = [...state.finance.transactions].sort((a,b)=> b.date.localeCompare(a.date));
     if(!sorted.length) return `<div class="lo-empty">Vēl nav neviena ieraksta.</div>`;
-    return sorted.map(t=>`
+    const accounts = state.finance.accounts || [];
+    const accountName = id => { const a = accounts.find(a=>a.id===id); return a ? a.name : '?'; };
+    return sorted.map(t=>{
+      const isTransfer = t.type === 'transfer';
+      const label = isTransfer
+        ? `${escapeHtml(accountName(t.fromAccountId))} → ${escapeHtml(accountName(t.toAccountId))}`
+        : `${escapeHtml(t.category||'')}${t.type==='savings' ? ' <span class="lo-tag" style="margin-left:4px;">Uzkrājums</span>' : ''}${t.note ? ' — '+escapeHtml(t.note) : ''}`;
+      const amountColor = isTransfer ? 'var(--text-muted)' : (t.type==='income' ? 'var(--accent)' : (t.type==='savings' ? 'var(--warn)' : 'var(--danger)'));
+      const sign = isTransfer ? '' : (t.type==='income' ? '+' : '−');
+      return `
       <div class="lo-task-item">
         <div class="lo-task-text" style="flex:0 0 88px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);">${t.date}</div>
-        <div class="lo-task-text">${escapeHtml(t.category)}${t.note ? ' — '+escapeHtml(t.note) : ''}</div>
+        <div class="lo-task-text">${label}</div>
         <div class="lo-task-tags">
-          <span class="lo-tag" style="color:${t.type==='income' ? 'var(--accent)' : 'var(--danger)'};">${t.type==='income' ? '+' : '−'}€${t.amount.toFixed(2)}</span>
+          <span class="lo-tag" style="color:${amountColor};">${sign}€${t.amount.toFixed(2)}</span>
           <button class="lo-btn danger-ghost" data-del-tx="${t.id}">✕</button>
         </div>
       </div>
-    `).join('');
+    `;}).join('');
   }
 
   function renderFinance(){
@@ -2917,9 +2930,15 @@
           <button class="lo-btn" id="add-account-btn">+ Pievienot</button>
         </div>
         ${accounts.length ? accounts.map(a=>{
-          const balance = state.finance.transactions
-            .filter(t=>t.accountId===a.id)
-            .reduce((s,t)=> s + (t.type==='income' ? t.amount : -t.amount), 0);
+          const balance = state.finance.transactions.reduce((s,t)=>{
+            if(t.type === 'transfer'){
+              if(t.fromAccountId === a.id) return s - t.amount;
+              if(t.toAccountId === a.id) return s + t.amount;
+              return s;
+            }
+            if(t.accountId !== a.id) return s;
+            return t.type === 'income' ? s + t.amount : s - t.amount;
+          }, 0);
           return `
           <div class="lo-task-item">
             <div class="lo-task-text">${escapeHtml(a.name)} <span style="color:var(--text-dim);font-size:11px;">· ${escapeHtml(a.type)}</span></div>
@@ -2934,11 +2953,16 @@
 
       <div class="lo-panel">
         <div class="lo-row-form">
-          <select class="lo-select" id="new-tx-type" style="flex:0 0 120px;">
+          <select class="lo-select" id="new-tx-type" style="flex:0 0 140px;">
             <option value="expense">Izdevums</option>
             <option value="income">Ienākums</option>
+            <option value="savings">Uzkrājums</option>
+            <option value="transfer">Pārskaitījums</option>
           </select>
           <input class="lo-input" id="new-tx-amount" type="number" step="0.01" min="0" placeholder="Summa (€)" style="flex:1;min-width:100px;" />
+          <input type="date" class="lo-input" id="new-tx-date" style="flex:1;min-width:130px;" value="${todayStr()}" />
+        </div>
+        <div class="lo-row-form" id="new-tx-category-row">
           <input class="lo-input" id="new-tx-category" list="tx-category-list" placeholder="Kategorija" style="flex:1;min-width:120px;" />
           <datalist id="tx-category-list">
             <option value="Pārtika"></option>
@@ -2964,13 +2988,22 @@
             <option value="Investīcijas"></option>
             <option value="Citi"></option>
           </datalist>
-          <input type="date" class="lo-input" id="new-tx-date" style="flex:1;min-width:130px;" value="${todayStr()}" />
-        </div>
-        <div class="lo-row-form">
           <select class="lo-select" id="new-tx-account" style="flex:0 0 160px;">
             <option value="">Bez konta</option>
             ${accounts.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('')}
           </select>
+        </div>
+        <div class="lo-row-form" id="new-tx-transfer-row" style="display:none;">
+          <select class="lo-select" id="new-tx-from-account" style="flex:1;min-width:140px;">
+            <option value="">No konta...</option>
+            ${accounts.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('')}
+          </select>
+          <select class="lo-select" id="new-tx-to-account" style="flex:1;min-width:140px;">
+            <option value="">Uz kontu...</option>
+            ${accounts.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="lo-row-form">
           <input class="lo-input" id="new-tx-note" placeholder="Piezīme (nav obligāti)" />
           <button class="lo-btn" id="add-tx-btn">+ Pievienot</button>
         </div>
@@ -4783,24 +4816,53 @@
         render();
       });
     }
+    const txTypeSelect = root.querySelector('#new-tx-type');
+    if(txTypeSelect){
+      const toggleTxFields = ()=>{
+        const categoryRow = root.querySelector('#new-tx-category-row');
+        const transferRow = root.querySelector('#new-tx-transfer-row');
+        const isTransfer = txTypeSelect.value === 'transfer';
+        if(categoryRow) categoryRow.style.display = isTransfer ? 'none' : 'flex';
+        if(transferRow) transferRow.style.display = isTransfer ? 'flex' : 'none';
+      };
+      txTypeSelect.addEventListener('change', toggleTxFields);
+      toggleTxFields();
+    }
     const addTxBtn = root.querySelector('#add-tx-btn');
     if(addTxBtn){
       addTxBtn.addEventListener('click', async ()=>{
         const typeSel = root.querySelector('#new-tx-type');
         const amountInput = root.querySelector('#new-tx-amount');
-        const categoryInput = root.querySelector('#new-tx-category');
         const dateInput = root.querySelector('#new-tx-date');
-        const accountSelect = root.querySelector('#new-tx-account');
         const noteInput = root.querySelector('#new-tx-note');
         const amount = parseFloat(amountInput.value);
-        const category = categoryInput.value.trim();
-        if(!amount || amount<=0 || !category) return;
-        state.finance.transactions.push({
-          id: uid(), type: typeSel.value, amount,
-          category, date: dateInput.value || todayStr(),
-          accountId: accountSelect ? (accountSelect.value || null) : null,
-          note: noteInput.value.trim()
-        });
+        if(!amount || amount<=0) return;
+        const type = typeSel.value;
+        const date = dateInput.value || todayStr();
+        const note = noteInput.value.trim();
+
+        if(type === 'transfer'){
+          const fromSelect = root.querySelector('#new-tx-from-account');
+          const toSelect = root.querySelector('#new-tx-to-account');
+          const fromAccountId = fromSelect ? fromSelect.value : '';
+          const toAccountId = toSelect ? toSelect.value : '';
+          if(!fromAccountId || !toAccountId || fromAccountId === toAccountId) return;
+          state.finance.transactions.push({
+            id: uid(), type: 'transfer', amount, date,
+            fromAccountId, toAccountId, category: null, note
+          });
+        } else {
+          const categoryInput = root.querySelector('#new-tx-category');
+          const accountSelect = root.querySelector('#new-tx-account');
+          const category = categoryInput.value.trim();
+          if(!category) return;
+          state.finance.transactions.push({
+            id: uid(), type, amount,
+            category, date,
+            accountId: accountSelect ? (accountSelect.value || null) : null,
+            note
+          });
+        }
         await safeSet('finance-data', state.finance);
         render();
       });
