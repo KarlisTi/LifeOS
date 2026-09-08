@@ -2819,7 +2819,7 @@
         if(t.type === 'savings') return s;
         if(t.accountId !== a.id) return s;
         return t.type === 'income' ? s + t.amount : s - t.amount;
-      }, 0);
+      }, a.startingBalance || 0);
       return sum + balance;
     }, 0);
   }
@@ -2947,6 +2947,7 @@
             <option value="Karte">Karte</option>
             <option value="Cits">Cits</option>
           </select>
+          <input class="lo-input" type="number" step="0.01" id="new-account-balance" placeholder="Sākuma atlikums (€)" style="flex:0 0 150px;" />
           <button class="lo-btn" id="add-account-btn">+ Pievienot</button>
         </div>
         ${accounts.length ? accounts.map(a=>{
@@ -2959,10 +2960,9 @@
             if(t.type === 'savings') return s;
             if(t.accountId !== a.id) return s;
             return t.type === 'income' ? s + t.amount : s - t.amount;
-          }, 0);
+          }, a.startingBalance || 0);
           return `
-          <div class="lo-task-item">
-            <div class="lo-task-text">${escapeHtml(a.name)} <span style="color:var(--text-dim);font-size:11px;">· ${escapeHtml(a.type)}</span></div>
+          <div class="lo-task-item">            <div class="lo-task-text">${escapeHtml(a.name)} <span style="color:var(--text-dim);font-size:11px;">· ${escapeHtml(a.type)}</span></div>
             <div class="lo-task-tags">
               <span class="lo-tag" style="color:${balance<0?'var(--danger)':'var(--accent)'};">€${balance.toFixed(2)}</span>
               <button class="lo-btn danger-ghost" data-del-account="${a.id}">✕</button>
@@ -4893,9 +4893,13 @@
       addAccountBtn.addEventListener('click', async ()=>{
         const nameInput = root.querySelector('#new-account-name');
         const typeSelect = root.querySelector('#new-account-type');
+        const balanceInput = root.querySelector('#new-account-balance');
         const name = nameInput.value.trim();
         if(!name) return;
-        state.finance.accounts.push({ id: uid(), name, type: typeSelect.value });
+        state.finance.accounts.push({
+          id: uid(), name, type: typeSelect.value,
+          startingBalance: balanceInput && balanceInput.value ? parseFloat(balanceInput.value) : 0,
+        });
         await safeSet('finance-data', state.finance);
         render();
       });
