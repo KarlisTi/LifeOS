@@ -1673,7 +1673,8 @@
             : ''}
         </div>
         ${state.googleConnected
-          ? `<div class="lo-module-sub" style="margin-bottom:0;">Google Tasks un Kalendārs ir pieslēgti. Sinhronizāciju vari palaist Uzdevumu sadaļā.</div>`
+          ? `<div class="lo-module-sub" style="margin-bottom:10px;">Google Tasks un Kalendārs ir pieslēgti. Sinhronizāciju vari palaist Uzdevumu sadaļā. Ja sinhronizācija sāk uzrādīt kļūdu, pieslēdzies vēlreiz zemāk (testēšanas režīmā Google atsauc piekļuvi ik pēc ~7 dienām).</div>
+             <button class="lo-btn ghost" id="google-connect-btn">Pieslēgties no jauna</button>`
           : `
             <div class="lo-module-sub">Pieslēdz Google kontu, lai dublētu uzdevumus Google Tasks un (drīzumā) redzētu Google Kalendāra notikumus šeit.</div>
             <button class="lo-btn" id="google-connect-btn">Pieslēgt Google</button>
