@@ -2758,10 +2758,9 @@
     const key = `${year}-${String(month+1).padStart(2,'0')}`;
     let income = 0, expense = 0; const byCategory = {};
     state.finance.transactions.forEach(t=>{
-      if(t.type==='transfer') return;
+      if(t.type==='transfer' || t.type==='savings') return;
       if(t.date.slice(0,7)===key){
         if(t.type==='income') income += t.amount;
-        else if(t.type==='savings') expense += t.amount;
         else { expense += t.amount; byCategory[t.category] = (byCategory[t.category]||0) + t.amount; }
       }
     });
@@ -2770,7 +2769,7 @@
   function yearTotals(year){
     const income = new Array(12).fill(0), expense = new Array(12).fill(0);
     state.finance.transactions.forEach(t=>{
-      if(t.type==='transfer') return;
+      if(t.type==='transfer' || t.type==='savings') return;
       const [y,m] = t.date.split('-');
       if(parseInt(y,10)===year){
         const idx = parseInt(m,10)-1;
@@ -2783,7 +2782,7 @@
     const days = new Date(year, month+1, 0).getDate();
     const income = new Array(days).fill(0), expense = new Array(days).fill(0);
     state.finance.transactions.forEach(t=>{
-      if(t.type==='transfer') return;
+      if(t.type==='transfer' || t.type==='savings') return;
       const d = new Date(t.date+'T00:00:00');
       if(d.getFullYear()===year && d.getMonth()===month){
         const idx = d.getDate()-1;
@@ -2897,7 +2896,7 @@
         ? `${escapeHtml(accountName(t.fromAccountId))} → ${escapeHtml(accountName(t.toAccountId))}`
         : `${escapeHtml(t.category||'')}${t.type==='savings' ? ' <span class="lo-tag" style="margin-left:4px;">Uzkrājums</span>' : ''}${t.note ? ' — '+escapeHtml(t.note) : ''}`;
       const amountColor = isTransfer ? 'var(--text-muted)' : (t.type==='income' ? 'var(--accent)' : (t.type==='savings' ? 'var(--warn)' : 'var(--danger)'));
-      const sign = isTransfer ? '' : (t.type==='income' ? '+' : '−');
+      const sign = isTransfer ? '' : (t.type==='income' ? '+' : (t.type==='savings' ? '↷ ' : '−'));
       return `
       <div class="lo-task-item">
         <div class="lo-task-text" style="flex:0 0 88px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);">${t.date}</div>
@@ -2937,6 +2936,7 @@
               if(t.toAccountId === a.id) return s + t.amount;
               return s;
             }
+            if(t.type === 'savings') return s;
             if(t.accountId !== a.id) return s;
             return t.type === 'income' ? s + t.amount : s - t.amount;
           }, 0);
