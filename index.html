@@ -1034,6 +1034,20 @@
 .lo-health-field { flex: 1; min-width: 140px; }
 .lo-health-field label { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
 .lo-history-row { display: flex; align-items: center; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; cursor: pointer; }
+.lo-tx-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 14px 4px 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+.lo-tx-group-header:first-child { padding-top: 4px; }
 
 /* ---- Weekly plan ---- */
 .lo-plan-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
@@ -1364,6 +1378,7 @@
     businessView: 'clients',
     theme: 'default',
     openBudgetSubitems: {},
+    txGrouping: 'date',
     calendarView: 'month',
     calWeekStart: null,
     finance: { transactions: [], budgets: [] },
@@ -2905,28 +2920,76 @@
     financeChartInstance = new Chart(ctx, config);
   }
 
-  function renderTxList(){
-    const sorted = [...state.finance.transactions].sort((a,b)=> b.date.localeCompare(a.date));
-    if(!sorted.length) return `<div class="lo-empty">Vēl nav neviena ieraksta.</div>`;
+  function renderTxRow(t){
     const accounts = state.finance.accounts || [];
     const accountName = id => { const a = accounts.find(a=>a.id===id); return a ? a.name : '?'; };
-    return sorted.map(t=>{
-      const isTransfer = t.type === 'transfer';
-      const label = isTransfer
-        ? `${escapeHtml(accountName(t.fromAccountId))} → ${escapeHtml(accountName(t.toAccountId))}`
-        : `${escapeHtml(t.category||'')}${t.type==='savings' ? ' <span class="lo-tag" style="margin-left:4px;">Uzkrājums</span>' : ''}${t.note ? ' — '+escapeHtml(t.note) : ''}`;
-      const amountColor = isTransfer ? 'var(--text-muted)' : (t.type==='income' ? 'var(--accent)' : (t.type==='savings' ? 'var(--warn)' : 'var(--danger)'));
-      const sign = isTransfer ? '' : (t.type==='income' ? '+' : (t.type==='savings' ? '↷ ' : '−'));
-      return `
+    const isTransfer = t.type === 'transfer';
+    const label = isTransfer
+      ? `${escapeHtml(accountName(t.fromAccountId))} → ${escapeHtml(accountName(t.toAccountId))}`
+      : `${escapeHtml(t.category||'')}${t.type==='savings' ? ' <span class="lo-tag" style="margin-left:4px;">Uzkrājums</span>' : ''}${t.note ? ' — '+escapeHtml(t.note) : ''}`;
+    const amountColor = isTransfer ? 'var(--text-muted)' : (t.type==='income' ? 'var(--accent)' : (t.type==='savings' ? 'var(--warn)' : 'var(--danger)'));
+    const sign = isTransfer ? '' : (t.type==='income' ? '+' : (t.type==='savings' ? '↷ ' : '−'));
+    return `
       <div class="lo-task-item">
-        <div class="lo-task-text" style="flex:0 0 88px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);">${t.date}</div>
+        <div class="lo-task-text" style="flex:0 0 100px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);">${t.date}${t.time ? ' '+t.time : ''}</div>
         <div class="lo-task-text">${label}</div>
         <div class="lo-task-tags">
           <span class="lo-tag" style="color:${amountColor};">${sign}€${t.amount.toFixed(2)}</span>
           <button class="lo-btn danger-ghost" data-del-tx="${t.id}">✕</button>
         </div>
       </div>
-    `;}).join('');
+    `;
+  }
+
+  function renderTxList(){
+    const all = state.finance.transactions;
+    if(!all.length) return `<div class="lo-empty">Vēl nav neviena ieraksta.</div>`;
+    const grouping = state.txGrouping || 'date';
+    const sortByDateTime = (a,b)=> (b.date+(b.time||'')).localeCompare(a.date+(a.time||''));
+
+    if(grouping === 'category'){
+      const byCategory = {};
+      all.forEach(t=>{
+        const key = t.type==='transfer' ? 'Pārskaitījumi' : (t.category || 'Bez kategorijas');
+        if(!byCategory[key]) byCategory[key] = [];
+        byCategory[key].push(t);
+      });
+      const categories = Object.keys(byCategory).sort((a,b)=>{
+        const totalA = byCategory[a].reduce((s,t)=>s+t.amount,0);
+        const totalB = byCategory[b].reduce((s,t)=>s+t.amount,0);
+        return totalB - totalA;
+      });
+      return categories.map(cat=>{
+        const items = [...byCategory[cat]].sort(sortByDateTime);
+        const total = items.reduce((s,t)=> s + (t.type==='income' ? t.amount : (t.type==='transfer' ? 0 : t.amount)), 0);
+        return `
+          <div class="lo-tx-group-header">
+            <span>${escapeHtml(cat)}</span>
+            <span style="color:var(--text-dim);font-weight:400;">${items.length} · €${total.toFixed(2)}</span>
+          </div>
+          ${items.map(renderTxRow).join('')}
+        `;
+      }).join('');
+    }
+
+    if(grouping === 'date'){
+      const byDate = {};
+      all.forEach(t=>{
+        if(!byDate[t.date]) byDate[t.date] = [];
+        byDate[t.date].push(t);
+      });
+      const dates = Object.keys(byDate).sort((a,b)=> b.localeCompare(a));
+      return dates.map(date=>{
+        const items = [...byDate[date]].sort((a,b)=> (b.time||'').localeCompare(a.time||''));
+        return `
+          <div class="lo-tx-group-header"><span>${date}</span></div>
+          ${items.map(renderTxRow).join('')}
+        `;
+      }).join('');
+    }
+
+    const sorted = [...all].sort(sortByDateTime);
+    return sorted.map(renderTxRow).join('');
   }
 
   function renderFinance(){
@@ -2982,6 +3045,10 @@
           </select>
           <input class="lo-input" id="new-tx-amount" type="number" step="0.01" min="0" placeholder="Summa (€)" style="flex:1;min-width:100px;" />
           <input type="date" class="lo-input" id="new-tx-date" style="flex:1;min-width:130px;" value="${todayStr()}" />
+          <div class="lo-time-picker-wrap">
+            <button type="button" class="lo-time-picker-btn" data-open-time-picker>🕐 Laiks</button>
+            <input type="hidden" id="new-tx-time" value="" />
+          </div>
         </div>
         <div class="lo-row-form" id="new-tx-category-row">
           <input class="lo-input" id="new-tx-category" list="tx-category-list" placeholder="Kategorija" style="flex:1;min-width:120px;" />
@@ -3031,7 +3098,14 @@
       </div>
 
       <div class="lo-panel">
-        <div class="lo-panel-title">Darījumi</div>
+        <div class="lo-panel-title" style="justify-content:space-between;">
+          <span>Darījumi</span>
+          <select class="lo-select" id="tx-grouping" style="font-size:11px;padding:6px 8px;">
+            <option value="none" ${state.txGrouping==='none'?'selected':''}>Bez grupēšanas</option>
+            <option value="date" ${state.txGrouping==='date'?'selected':''}>Grupēt pēc datuma</option>
+            <option value="category" ${state.txGrouping==='category'?'selected':''}>Grupēt pēc kategorijas</option>
+          </select>
+        </div>
         ${renderTxList()}
       </div>
 
@@ -4849,17 +4923,26 @@
       txTypeSelect.addEventListener('change', toggleTxFields);
       toggleTxFields();
     }
+    const txGroupingSelect = root.querySelector('#tx-grouping');
+    if(txGroupingSelect){
+      txGroupingSelect.addEventListener('change', ()=>{
+        state.txGrouping = txGroupingSelect.value;
+        render();
+      });
+    }
     const addTxBtn = root.querySelector('#add-tx-btn');
     if(addTxBtn){
       addTxBtn.addEventListener('click', async ()=>{
         const typeSel = root.querySelector('#new-tx-type');
         const amountInput = root.querySelector('#new-tx-amount');
         const dateInput = root.querySelector('#new-tx-date');
+        const timeInput = root.querySelector('#new-tx-time');
         const noteInput = root.querySelector('#new-tx-note');
         const amount = parseFloat(amountInput.value);
         if(!amount || amount<=0) return;
         const type = typeSel.value;
         const date = dateInput.value || todayStr();
+        const time = timeInput ? (timeInput.value || null) : null;
         const note = noteInput.value.trim();
 
         if(type === 'transfer'){
@@ -4869,7 +4952,7 @@
           const toAccountId = toSelect ? toSelect.value : '';
           if(!fromAccountId || !toAccountId || fromAccountId === toAccountId) return;
           state.finance.transactions.push({
-            id: uid(), type: 'transfer', amount, date,
+            id: uid(), type: 'transfer', amount, date, time,
             fromAccountId, toAccountId, category: null, note
           });
         } else {
@@ -4879,7 +4962,7 @@
           if(!category) return;
           state.finance.transactions.push({
             id: uid(), type, amount,
-            category, date,
+            category, date, time,
             accountId: accountSelect ? (accountSelect.value || null) : null,
             note
           });
