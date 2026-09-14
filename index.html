@@ -1700,8 +1700,10 @@
         <div class="lo-tab ${view==='month'?'active':''}" data-cal-view="month">Mēnesis</div>
         <div class="lo-tab ${view==='week'?'active':''}" data-cal-view="week">Nedēļa</div>
         <div class="lo-tab ${view==='day'?'active':''}" data-cal-view="day">Diena</div>
+        <div class="lo-tab ${view==='google'?'active':''}" data-cal-view="google">Google Calendar</div>
       </div>
 
+      ${view==='google' ? renderGoogleCalendarEmbed() : ''}
       ${view==='month' ? renderCalendar() : ''}
       ${view==='week' ? renderWeekView() : ''}
       ${view==='day' ? renderDayView() : ''}
@@ -1789,6 +1791,17 @@
       <div class="lo-panel">
         ${renderDaySections(date)}
       </div>
+    `;
+  }
+
+  function renderGoogleCalendarEmbed(){
+    const src = encodeURIComponent('karlis.tiltins89@gmail.com');
+    const embedUrl = `https://calendar.google.com/calendar/embed?src=${src}&ctz=Europe%2FRiga&mode=MONTH&showTitle=0&showPrint=0&showCalendars=0&showTz=0`;
+    return `
+      <div class="lo-panel" style="padding:0;overflow:hidden;">
+        <iframe src="${embedUrl}" style="border:0;display:block;" width="100%" height="650" frameborder="0" scrolling="no"></iframe>
+      </div>
+      <div class="lo-module-sub" style="margin-top:10px;">Ja kalendārs nerādās, pārliecinies, ka šajā pārlūkā esi ielogojies ar Google kontu <b>karlis.tiltins89@gmail.com</b>.</div>
     `;
   }
 
