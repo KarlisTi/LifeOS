@@ -1933,6 +1933,7 @@
           <div class="lo-theme-picker" title="Tēma">
             ${THEMES.map(t=>`<button type="button" class="lo-theme-swatch ${state.theme===t.key?'active':''}" data-set-theme="${t.key}" style="background:${t.color};" title="${t.name}"></button>`).join('')}
           </div>
+          <button class="lo-logout-btn" id="export-data-btn" style="margin-top:4px;">⬇ EKSPORTĒT DATUS</button>
           <button class="lo-logout-btn" id="logout-btn">IZRAKSTĪTIES</button>
         </div>
       </div>
@@ -3925,6 +3926,31 @@
     if(logoutBtn){
       logoutBtn.addEventListener('click', async ()=>{
         await sb.auth.signOut();
+      });
+    }
+    const exportDataBtn = root.querySelector('#export-data-btn');
+    if(exportDataBtn){
+      exportDataBtn.addEventListener('click', ()=>{
+        const exportPayload = {
+          exportedAt: new Date().toISOString(),
+          tasks: state.tasks,
+          habits: state.habits,
+          goals: state.goals,
+          learning: state.learning,
+          finance: state.finance,
+          business: state.business,
+          health: state.health,
+          journal: state.journal,
+        };
+        const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `lifeos-backup-${todayStr()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       });
     }
     root.querySelectorAll('[data-set-theme]').forEach(el=>{
