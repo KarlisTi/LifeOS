@@ -3269,12 +3269,22 @@
     const sorted = [...invoices].sort((a,b)=> (b.issueDate||'').localeCompare(a.issueDate||''));
     return `
       <div class="lo-panel">
+        <div class="lo-panel-title">📋 Ielīmēt Etsy pasūtījumu</div>
+        <div class="lo-module-sub" style="margin-bottom:10px;">Iekopē pasūtījuma informāciju no Etsy (pircējs, summa, datums, prece) — mēģināsim automātiski atpazīt un sadalīt laukos zemāk. Pēc tam pārbaudi un saglabā parasti.</div>
+        <textarea class="lo-textarea" id="etsy-paste-input" placeholder="Ielīmē šeit Etsy pasūtījuma tekstu..." style="min-height:80px;"></textarea>
+        <button class="lo-btn ghost" id="parse-etsy-btn" style="margin-top:8px;">Parsēt</button>
+      </div>
+
+      <div class="lo-panel">
         <div class="lo-row-form">
-          <select class="lo-select" id="new-invoice-client" style="flex:1;min-width:140px;">
-            <option value="">Bez klienta</option>
-            ${clients.map(c=>`<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('')}
-          </select>
+          <input class="lo-input" id="new-invoice-client" list="business-client-list" placeholder="Klients / pircējs" style="flex:1;min-width:140px;" />
+          <datalist id="business-client-list">
+            ${clients.map(c=>`<option value="${escapeHtml(c.name)}"></option>`).join('')}
+          </datalist>
           <input class="lo-input" type="number" step="0.01" min="0" id="new-invoice-amount" placeholder="Summa (€)" style="flex:0 0 120px;" />
+        </div>
+        <div class="lo-row-form">
+          <input class="lo-input" id="new-invoice-note" placeholder="Prece / apraksts (nav obligāti)" style="flex:1;min-width:140px;" />
         </div>
         <div class="lo-row-form">
           <input type="date" class="lo-input" id="new-invoice-issue-date" value="${todayStr()}" style="flex:1;min-width:130px;" />
@@ -3288,7 +3298,7 @@
       <div class="lo-panel">
         ${sorted.length ? sorted.map(inv=>`
           <div class="lo-task-item">
-            <div class="lo-task-text">${inv.client ? escapeHtml(inv.client) : '—'} <span style="color:var(--accent);font-weight:600;">€${inv.amount.toFixed(2)}</span></div>
+            <div class="lo-task-text">${inv.client ? escapeHtml(inv.client) : '—'}${inv.note ? ` <span style="color:var(--text-dim);font-size:11px;">· ${escapeHtml(inv.note)}</span>` : ''} <span style="color:var(--accent);font-weight:600;">€${inv.amount.toFixed(2)}</span></div>
             <div class="lo-task-tags">
               <span class="lo-tag">${inv.issueDate||''}${inv.dueDate ? ' → '+inv.dueDate : ''}</span>
               <select class="lo-select" data-invoice-status="${inv.id}" style="font-size:11px;padding:5px 7px;">
@@ -3300,6 +3310,44 @@
         `).join('') : `<div class="lo-empty">Vēl nav pievienots neviens rēķins.</div>`}
       </div>
     `;
+  }
+
+  function parseEtsyOrderText(text){
+    const result = { buyer: '', item: '', price: null, date: null };
+    const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+
+    const priceMatch = text.match(/[\$€]\s?(\d{1,5}(?:[.,]\d{2})?)/) || text.match(/(\d{1,5}[.,]\d{2})\s?[\$€]/);
+    if(priceMatch) result.price = parseFloat(priceMatch[1].replace(',', '.'));
+
+    const isoDateMatch = text.match(/\b(\d{4}-\d{2}-\d{2})\b/);
+    const monthNameDateMatch = text.match(/\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})\b/i)
+      || text.match(/\b(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4})\b/i);
+    if(isoDateMatch){
+      result.date = isoDateMatch[1];
+    } else if(monthNameDateMatch){
+      const parsed = new Date(monthNameDateMatch[1]);
+      if(!isNaN(parsed.getTime())) result.date = parsed.toISOString().slice(0,10);
+    }
+
+    const buyerLineIdx = lines.findIndex(l=>/ship(ped| to)?:?\s*$|buyer:?\s*$|from:?\s*$/i.test(l));
+    if(buyerLineIdx >= 0 && lines[buyerLineIdx+1]){
+      result.buyer = lines[buyerLineIdx+1];
+    } else {
+      const labeledBuyer = text.match(/(?:ship(?:ped)? to|buyer|from)\s*:\s*(.+)/i);
+      if(labeledBuyer) result.buyer = labeledBuyer[1].trim();
+      else if(lines.length) result.buyer = lines[0];
+    }
+
+    let longest = '';
+    lines.forEach(l=>{
+      if(l === result.buyer) return;
+      if(/[\$€]\s?\d/.test(l) || /\d\s?[\$€]/.test(l)) return;
+      if(/^(order|qty|quantity|ship|buyer|from|date|total)/i.test(l)) return;
+      if(l.length > longest.length) longest = l;
+    });
+    result.item = longest;
+
+    return result;
   }
 
   function renderBusinessIdeas(ideas){
@@ -5139,8 +5187,9 @@
     const addInvoiceBtn = root.querySelector('#add-invoice-btn');
     if(addInvoiceBtn){
       addInvoiceBtn.addEventListener('click', async ()=>{
-        const clientSelect = root.querySelector('#new-invoice-client');
+        const clientInput = root.querySelector('#new-invoice-client');
         const amountInput = root.querySelector('#new-invoice-amount');
+        const noteInput = root.querySelector('#new-invoice-note');
         const issueDateInput = root.querySelector('#new-invoice-issue-date');
         const dueDateInput = root.querySelector('#new-invoice-due-date');
         const statusSelect = root.querySelector('#new-invoice-status');
@@ -5148,14 +5197,33 @@
         if(!amount || amount <= 0) return;
         state.business.invoices.push({
           id: uid(),
-          client: clientSelect.value || '',
+          client: clientInput.value.trim() || '',
           amount,
+          note: noteInput ? noteInput.value.trim() : '',
           issueDate: issueDateInput.value || todayStr(),
           dueDate: dueDateInput.value || null,
           status: statusSelect.value,
         });
         await safeSet('business-data', state.business);
         render();
+      });
+    }
+    const parseEtsyBtn = root.querySelector('#parse-etsy-btn');
+    if(parseEtsyBtn){
+      parseEtsyBtn.addEventListener('click', ()=>{
+        const pasteInput = root.querySelector('#etsy-paste-input');
+        const raw = pasteInput.value.trim();
+        if(!raw) return;
+        const parsed = parseEtsyOrderText(raw);
+        const clientInput = root.querySelector('#new-invoice-client');
+        const amountInput = root.querySelector('#new-invoice-amount');
+        const noteInput = root.querySelector('#new-invoice-note');
+        const issueDateInput = root.querySelector('#new-invoice-issue-date');
+        if(clientInput && parsed.buyer) clientInput.value = parsed.buyer;
+        if(amountInput && parsed.price) amountInput.value = parsed.price;
+        if(noteInput && parsed.item) noteInput.value = parsed.item;
+        if(issueDateInput && parsed.date) issueDateInput.value = parsed.date;
+        clientInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
     }
     root.querySelectorAll('[data-invoice-status]').forEach(el=>{
